@@ -60,7 +60,7 @@ html, body {
 }
 #cfg-bar.hidden { display:none; }
 #cfg-key {
-  flex:1; max-width:340px;
+  flex:1; max-width:440px;
   background:transparent; border:1px solid var(--neon-dim);
   color:var(--neon); font-family:var(--mono);
   font-size:0.56rem; padding:0.16rem 0.5rem; outline:none;
@@ -172,8 +172,6 @@ html, body {
 .tr-bar { width:80px; height:2px; background:rgba(0,255,0,0.07); margin-top:3px; overflow:hidden; }
 .tr-fill { height:100%; background:var(--neon); box-shadow:0 0 4px var(--neon); transition:width 0.3s ease; }
 .tr-val { font-size:0.44rem; letter-spacing:0.1em; color:var(--neon-mid); margin-top:2px; }
-
-/* Heat indicator — glows red when typing hot */
 #heat-bar { background: linear-gradient(90deg, #00FF00, #88FF00); }
 
 /* ─── BATTERY WIDGET ───────────────────────────────────── */
@@ -262,20 +260,22 @@ html, body {
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
 'use strict';
+
 /* ═══════════════════════════════════════════════════════════
-   CONFIG — MOTOR GROQ v5.5
+   CONFIG — MOTOR GROQ v5.5 (SEM CORTES)
 ═══════════════════════════════════════════════════════════ */
 const CFG = {
-  ENDPOINT: 'https://api.groq.com/openai/v1/chat/completions',
-  MODEL:    'llama-3.1-70b-versatile',
-  PARTICLE_N: 52000,
-  FEELER_N: 22,
-  BLOOM_STRENGTH: 3.2,
+  ENDPOINT:        'https://api.groq.com/openai/v1/chat/completions',
+  MODEL:           'llama-3.1-70b-versatile',
+  PARTICLE_N:      52000,
+  FEELER_N:        22,
+  BLOOM_STRENGTH:  3.2,
   BLOOM_THRESHOLD: 0.09,
 };
 
 /* ═══════════════════════════════════════════════════════════
    VISITOR INTELLIGENCE MODULE
+   Async, non-blocking — never delays first frame
 ═══════════════════════════════════════════════════════════ */
 const INTEL = {
   ip: '—', city: '—', region: '—', country: '—',
@@ -291,7 +291,9 @@ function extractGPU() {
     const ext = gl.getExtension('WEBGL_debug_renderer_info');
     if (!ext) return 'MASKED';
     const raw = gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) || 'UNKNOWN';
-    const m = raw.match(/ANGLE \([^,]+,\s*(.+?)\s*(Direct3D|OpenGL|Metal|Vulkan|\/|,)/) || raw.match(/ANGLE \((.+?)\)/);
+    /* Trim vendor noise */
+    const m = raw.match(/ANGLE \([^,]+,\s*(.+?)\s*(Direct3D|OpenGL|Metal|Vulkan|\/|,)/) ||
+              raw.match(/ANGLE \((.+?)\)/);
     return m ? m[1].trim().slice(0, 38) : raw.slice(0, 38);
   } catch (e) { return 'INACCESSÍVEL'; }
 }
@@ -301,6 +303,7 @@ async function fetchBattery() {
     if (!navigator.getBattery) return '—';
     const b = await navigator.getBattery();
     const pct = Math.round(b.level * 100);
+    /* Live updates */
     b.addEventListener('levelchange', () => {
       INTEL.battery = Math.round(b.level * 100) + '%';
       updateBatteryUI(b.level);
@@ -313,15 +316,22 @@ async function fetchBattery() {
 function updateBatteryUI(level) {
   document.getElementById('batt-fill').style.width = (level * 100) + '%';
   document.getElementById('batt-pct').textContent = Math.round(level * 100) + '% CARGA';
-  if (level < 0.20) document.getElementById('batt-fill').style.background = '#AAFF00';
+  /* Low battery: dim green */
+  if (level < 0.20) {
+    document.getElementById('batt-fill').style.background = '#AAFF00';
+  }
 }
 
 async function fetchVisitorIntelligence() {
+  /* Hardware — synchronous, instant */
   INTEL.gpu = extractGPU();
   INTEL.cpu = (navigator.hardwareConcurrency || '?') + ' núcleos';
   INTEL.ram = (navigator.deviceMemory ? navigator.deviceMemory + ' GB' : '—');
+
+  /* Battery — async but fast */
   INTEL.battery = await fetchBattery();
 
+  /* IP geolocation — async, non-blocking */
   try {
     const r = await fetch('https://ipapi.co/json/', { cache: 'no-store' });
     if (r.ok) {
@@ -348,9 +358,12 @@ function renderIntelPanel() {
   document.getElementById('ip-cpu').textContent = INTEL.cpu;
   document.getElementById('ip-gpu').textContent = INTEL.gpu;
   document.getElementById('ip-ram').textContent = INTEL.ram;
-  window.INTEL = INTEL; // Expose globally for audio/network modules
+  
+  /* Expõe globalmente para o Motor de Áudio e Rede depois */
+  window.INTEL = INTEL;
 }
 
+/* ── Dynamic boot message ── */
 let bootFired = false;
 function fireBoot() {
   if (bootFired) return;
@@ -365,232 +378,562 @@ function fireBoot() {
   startTypewriter(msg);
 }
 /* ═══════════════════════════════════════════════════════════
-   GLSL — VERTEX & FRAGMENT SHADERS (52K Particles)
+   GLSL — VERTEX SHADER (Núcleo de 52K Partículas)
 ═══════════════════════════════════════════════════════════ */
 const VERT_NEXO = `
 precision highp float;
-uniform float uTime; uniform vec2 uMouse; uniform float uMut; uniform float uMF; uniform float uHeat;
-attribute float aR; attribute float aSc;
-varying float vB; varying float vD; varying float vRnd; varying float vDend; varying float vSpk;
+uniform float uTime;
+uniform vec2  uMouse;
+uniform float uMut;
+uniform float uMF;
+uniform float uHeat;
+attribute float aR;
+attribute float aSc;
+varying float vB;
+varying float vD;
+varying float vRnd;
+varying float vDend;
+varying float vSpk;
 
 vec3 m3(vec3 x){return x-floor(x*(1./289.))*289.;}
 vec4 m4(vec4 x){return x-floor(x*(1./289.))*289.;}
 vec4 pm(vec4 x){return m4(((x*34.)+1.)*x);}
 vec4 ti(vec4 r){return 1.79284291400159-0.85373472095314*r;}
 float sn(vec3 v){
-  const vec2 C=vec2(1./6.,1./3.); const vec4 D=vec4(0.,.5,1.,2.);
-  vec3 i=floor(v+dot(v,C.yyy)); vec3 x0=v-i+dot(i,C.xxx);
-  vec3 g=step(x0.yzx,x0.xyz); vec3 l=1.-g;
-  vec3 i1=min(g.xyz,l.zxy); vec3 i2=max(g.xyz,l.zxy);
-  vec3 x1=x0-i1+C.xxx; vec3 x2=x0-i2+C.yyy; vec3 x3=x0-D.yyy;
+  const vec2 C=vec2(1./6.,1./3.);
+  const vec4 D=vec4(0.,.5,1.,2.);
+  vec3 i=floor(v+dot(v,C.yyy));
+  vec3 x0=v-i+dot(i,C.xxx);
+  vec3 g=step(x0.yzx,x0.xyz);
+  vec3 l=1.-g;
+  vec3 i1=min(g.xyz,l.zxy);
+  vec3 i2=max(g.xyz,l.zxy);
+  vec3 x1=x0-i1+C.xxx;
+  vec3 x2=x0-i2+C.yyy;
+  vec3 x3=x0-D.yyy;
   i=m3(i);
   vec4 p=pm(pm(pm(i.z+vec4(0.,i1.z,i2.z,1.))+i.y+vec4(0.,i1.y,i2.y,1.))+i.x+vec4(0.,i1.x,i2.x,1.));
-  float n_=0.142857142857; vec3 ns=n_*D.wyz-D.xzx;
+  float n_=0.142857142857;
+  vec3 ns=n_*D.wyz-D.xzx;
   vec4 j=p-49.*floor(p*ns.z*ns.z);
   vec4 x_=floor(j*ns.z); vec4 y_=floor(j-7.*x_);
   vec4 x=x_*ns.x+ns.yyyy; vec4 y=y_*ns.x+ns.yyyy;
-  vec4 h=1.-abs(x)-abs(y); vec4 b0=vec4(x.xy,y.xy); vec4 b1=vec4(x.zw,y.zw);
+  vec4 h=1.-abs(x)-abs(y);
+  vec4 b0=vec4(x.xy,y.xy); vec4 b1=vec4(x.zw,y.zw);
   vec4 s0=floor(b0)*2.+1.; vec4 s1=floor(b1)*2.+1.;
-  vec4 sh=-step(h,vec4(0.)); vec4 a0=b0.xzyw+s0.xzyw*sh.xxyy; vec4 a1=b1.xzyw+s1.xzyw*sh.zzww;
-  vec3 p0=vec3(a0.xy,h.x); vec3 p1=vec3(a0.zw,h.y); vec3 p2=vec3(a1.xy,h.z); vec3 p3=vec3(a1.zw,h.w);
+  vec4 sh=-step(h,vec4(0.));
+  vec4 a0=b0.xzyw+s0.xzyw*sh.xxyy; vec4 a1=b1.xzyw+s1.xzyw*sh.zzww;
+  vec3 p0=vec3(a0.xy,h.x); vec3 p1=vec3(a0.zw,h.y);
+  vec3 p2=vec3(a1.xy,h.z); vec3 p3=vec3(a1.zw,h.w);
   vec4 nm=ti(vec4(dot(p0,p0),dot(p1,p1),dot(p2,p2),dot(p3,p3)));
   p0*=nm.x;p1*=nm.y;p2*=nm.z;p3*=nm.w;
-  vec4 mv=max(0.6-vec4(dot(x0,x0),dot(x1,x1),dot(x2,x2),dot(x3,x3)),0.); mv=mv*mv;
+  vec4 mv=max(0.6-vec4(dot(x0,x0),dot(x1,x1),dot(x2,x2),dot(x3,x3)),0.);
+  mv=mv*mv;
   return 42.*dot(mv*mv,vec4(dot(p0,x0),dot(p1,x1),dot(p2,x2),dot(p3,x3)));
 }
 
 void main(){
-  vec3 pos=position; float d0=length(pos); float t=uTime;
-  float hAmp=0.55+uHeat*1.8;
-  vec3 n1=vec3(sn(pos*0.9+t*0.22),sn(pos*0.9+t*0.22+17.5),sn(pos*0.9+t*0.22+35.0))*hAmp;
-  vec3 n2=vec3(sn(pos*4.2+t*(1.8+uHeat*3.5)),sn(pos*4.2+t*(1.8+uHeat*3.5)+55.5),sn(pos*4.2+t*(1.8+uHeat*3.5)+111.0))*(0.18+uHeat*0.42);
+  vec3 pos=position;
+  float d0=length(pos);
+  float t=uTime;
+
+  /* Heat distortion: o calor da digitação faz o campo ferver */
+  float hAmp = 0.55 + uHeat * 1.8;
+  vec3 n1=vec3(
+    sn(pos*0.9+t*0.22),sn(pos*0.9+t*0.22+17.5),sn(pos*0.9+t*0.22+35.0)
+  )*hAmp;
+  vec3 n2=vec3(
+    sn(pos*4.2+t*(1.8+uHeat*3.5)),
+    sn(pos*4.2+t*(1.8+uHeat*3.5)+55.5),
+    sn(pos*4.2+t*(1.8+uHeat*3.5)+111.0)
+  )*(0.18+uHeat*0.42);
+
+  /* Espasmos do núcleo */
   float sph=floor(t*(7.5+uHeat*8.0)+aR*317.0);
   float sh=fract(sin(sph*127.1+aR*311.7)*43758.5453);
   float isSpk=step(0.945,sh);
   float sAmp=isSpk*(3.8+uMut*7.0+uHeat*5.0);
-  vec3 sD=normalize(pos+n1*0.35)*sAmp; vSpk=isSpk;
-  float isDnd=step(0.70,aR); float dLen=(aR-0.70)/0.30;
+  vec3 sD=normalize(pos+n1*0.35)*sAmp;
+  vSpk=isSpk;
+
+  /* Dendritos neurais */
+  float isDnd=step(0.70,aR);
+  float dLen=(aR-0.70)/0.30;
   vec3 dDir=normalize(pos+(n1+n2)*0.5);
   float dPulse=sin(t*3.5+aR*6.283)*.5+.5;
-  vec3 dD=dDir*dLen*4.0*(dPulse*(1.0+uMut*4.5+uHeat*2.0))*isDnd; vDend=isDnd*dPulse;
-  vec3 mW=vec3(uMouse.x*4.2,uMouse.y*3.0,0.0); vec3 toM=mW-pos; float mExp=exp(-length(toM)*0.28);
+  vec3 dD=dDir*dLen*4.0*(dPulse*(1.0+uMut*4.5+uHeat*2.0))*isDnd;
+  vDend=isDnd*dPulse;
+
+  /* Ataque Predatório (direção do mouse/toque) */
+  vec3 mW=vec3(uMouse.x*4.2,uMouse.y*3.0,0.0);
+  vec3 toM=mW-pos;
+  float mExp=exp(-length(toM)*0.28);
   vec3 predD=normalize(toM+0.001)*mExp*uMF*4.0;
-  float mWv=sin(t*19.0+d0*5.5+aR*3.14)*uMut; vec3 mD=normalize(pos+0.001)*mWv*3.5;
+
+  /* Ondas de mutação */
+  float mWv=sin(t*19.0+d0*5.5+aR*3.14)*uMut;
+  vec3 mD=normalize(pos+0.001)*mWv*3.5;
+
   pos+=n1+n2+sD+dD+predD+mD;
   vD=length(pos); vRnd=aR;
   vB=(1.0-clamp(vD/6.5,0.,1.))+vDend*.9+isSpk*2.4+uMut*.95+uHeat*.7+uMF*mExp*.55;
+
   vec4 mv=modelViewMatrix*vec4(pos,1.0);
   float ptSz=(aSc*5.5+vB*3.2+uMut*5.5+isSpk*11.+uHeat*4.0)*(315./-mv.z);
-  gl_PointSize=clamp(ptSz,0.4,36.0); gl_Position=projectionMatrix*mv;
+  gl_PointSize=clamp(ptSz,0.4,36.0);
+  gl_Position=projectionMatrix*mv;
 }`;
 
+/* ═══════════════════════════════════════════════════════════
+   GLSL — FRAGMENT SHADER (Núcleo)
+═══════════════════════════════════════════════════════════ */
 const FRAG_NEXO = `
 precision highp float;
-varying float vB; varying float vD; varying float vRnd; varying float vDend; varying float vSpk;
-uniform float uMut; uniform float uHeat; uniform float uTime;
+varying float vB;
+varying float vD;
+varying float vRnd;
+varying float vDend;
+varying float vSpk;
+uniform float uMut;
+uniform float uHeat;
+uniform float uTime;
 void main(){
-  vec2 uv=gl_PointCoord-.5; float d=length(uv); if(d>.5) discard;
+  vec2 uv=gl_PointCoord-.5;
+  float d=length(uv);
+  if(d>.5) discard;
+  
   float alpha=pow(1.-smoothstep(0.,.5,d),1.2);
-  float ring=smoothstep(.30,.42,d)*(1.-smoothstep(.42,.5,d)); ring*=(vB*2.0+vDend+vSpk*4.+uHeat*1.8);
+  float ring=smoothstep(.30,.42,d)*(1.-smoothstep(.42,.5,d));
+  ring*=(vB*2.0+vDend+vSpk*4.+uHeat*1.8);
   float bloom=exp(-d*4.5)*.85;
+  
+  /* Interferência de Carne Digital */
   float hf=1.8+uHeat*4.0;
-  float w1=sin(d*32.*hf-uTime*.9+vRnd*6.28)*.5+.5; float w2=sin(d*58.*hf+uTime*1.35-vRnd*3.14)*.5+.5;
-  float flesh=pow(w1*w2,2.0)*.28*vB; float t=clamp(vD/5.8,0.,1.);
-  vec3 cCore=vec3(.75,1.,.55); vec3 cNeon=vec3(0.,1.,0.); vec3 cDeep=vec3(0.,.22,0.);
-  vec3 base=mix(cCore,cNeon,smoothstep(0.,.22,t)); base=mix(base,cDeep,smoothstep(.22,1.,t));
-  base=mix(base,vec3(.65,1.,.65),vDend*.8); base=mix(base,vec3(.9,1.,.9),vSpk*.88);
-  base+=cNeon*flesh; base+=cNeon*bloom*(vB*.9+.18); base+=vec3(.3,1.,.34)*ring*.58;
+  float w1=sin(d*32.*hf-uTime*.9+vRnd*6.28)*.5+.5;
+  float w2=sin(d*58.*hf+uTime*1.35-vRnd*3.14)*.5+.5;
+  float flesh=pow(w1*w2,2.0)*.28*vB;
+  float t=clamp(vD/5.8,0.,1.);
+  
+  vec3 cCore=vec3(.75,1.,.55);
+  vec3 cNeon=vec3(0.,1.,0.);
+  vec3 cDeep=vec3(0.,.22,0.);
+  vec3 base=mix(cCore,cNeon,smoothstep(0.,.22,t));
+  
+  base=mix(base,cDeep,smoothstep(.22,1.,t));
+  base=mix(base,vec3(.65,1.,.65),vDend*.8);
+  base=mix(base,vec3(.9,1.,.9),vSpk*.88);
+  base+=cNeon*flesh;
+  base+=cNeon*bloom*(vB*.9+.18);
+  base+=vec3(.3,1.,.34)*ring*.58;
+  
   float mf=sin(uTime*(34.+uHeat*22.)+vRnd*6.28)*.5+.5;
   base=mix(base,vec3(.48,1.,.44),(uMut+uHeat*.5)*mf*.4);
   float fa=(alpha+bloom*.55+ring*.4)*clamp(vB*2.2,.01,1.);
+  
   gl_FragColor=vec4(base,clamp(fa,0.,1.));
 }`;
+/* ═══════════════════════════════════════════════════════════
+   FEELER SHADERS — glitch spasm on high mouse force
+═══════════════════════════════════════════════════════════ */
+const VERT_FEEL = `
+precision mediump float;
+attribute float aFA;
+attribute float aFJ;
+varying float vFA;
+uniform float uMF;
+uniform float uTime;
+void main(){
+  vFA=aFA;
+  vec3 pos=position;
+  /* Glitch spasm: tendril writhes when predatory force is high */
+  float spasm=uMF*uMF*sin(uTime*28.+aFA*6.28+aFJ*17.3)*0.18;
+  pos.x+=spasm*(1.-aFA);
+  pos.y+=spasm*(1.-aFA)*0.7;
+  gl_Position=projectionMatrix*modelViewMatrix*vec4(pos,1.0);
+}`;
 
-/* Feeler Shaders */
-const VERT_FEEL = `precision mediump float; attribute float aFA; attribute float aFJ; varying float vFA; uniform float uMF; uniform float uTime; void main(){ vFA=aFA; vec3 pos=position; float spasm=uMF*uMF*sin(uTime*28.+aFA*6.28+aFJ*17.3)*0.18; pos.x+=spasm*(1.-aFA); pos.y+=spasm*(1.-aFA)*0.7; gl_Position=projectionMatrix*modelViewMatrix*vec4(pos,1.0); }`;
-const FRAG_FEEL = `precision mediump float; varying float vFA; uniform float uTime; uniform float uMF; void main(){ float pulse=sin(uTime*10.+vFA*6.28)*.32+.68; float a=vFA*pulse*(0.22+uMF*0.78); vec3 c=mix(vec3(0.,.5,0.),vec3(.3,1.,.35),vFA*(0.3+uMF*.7)); gl_FragColor=vec4(c,clamp(a,0.,1.)); }`;
-
-/* Post-Process Shaders */
-const VERT_Q = `varying vec2 vUv; void main(){ vUv=position.xy*.5+.5; gl_Position=vec4(position.xy,0.,1.); }`;
-const FRAG_BH = `precision highp float; varying vec2 vUv; uniform sampler2D tSc; uniform vec2 uTxH; uniform float uThr; vec3 bs(vec2 uv){ vec3 c=texture2D(tSc,uv).rgb; float br=max(c.r,max(c.g,c.b)); return c*smoothstep(uThr-.07,uThr+.07,br); } void main(){ float w=uTxH.x; vec3 b=vec3(0.); b+=bs(vUv+vec2(-4.*w,0.))*.051; b+=bs(vUv+vec2(-3.*w,0.))*.0918; b+=bs(vUv+vec2(-2.*w,0.))*.1227;b+=bs(vUv+vec2(-1.*w,0.))*.1633; b+=bs(vUv)*.2041; b+=bs(vUv+vec2(1.*w,0.))*.1633; b+=bs(vUv+vec2(2.*w,0.))*.1227; b+=bs(vUv+vec2(3.*w,0.))*.0918; b+=bs(vUv+vec2(4.*w,0.))*.051; gl_FragColor=vec4(b,1.); }`;
-const FRAG_BV = `precision highp float; varying vec2 vUv; uniform sampler2D tBH; uniform vec2 uTxV; void main(){ float w=uTxV.y; vec3 b=vec3(0.); b+=texture2D(tBH,vUv+vec2(0.,-4.*w)).rgb*.051; b+=texture2D(tBH,vUv+vec2(0.,-3.*w)).rgb*.0918; b+=texture2D(tBH,vUv+vec2(0.,-2.*w)).rgb*.1227; b+=texture2D(tBH,vUv+vec2(0.,-1.*w)).rgb*.1633; b+=texture2D(tBH,vUv).rgb*.2041; b+=texture2D(tBH,vUv+vec2(0.,1.*w)).rgb*.1633; b+=texture2D(tBH,vUv+vec2(0.,2.*w)).rgb*.1227; b+=texture2D(tBH,vUv+vec2(0.,3.*w)).rgb*.0918; b+=texture2D(tBH,vUv+vec2(0.,4.*w)).rgb*.051; gl_FragColor=vec4(b,1.); }`;
-const FRAG_COMP = `precision highp float; varying vec2 vUv; uniform sampler2D tSc; uniform sampler2D tBl; uniform float uBS; uniform float uG; uniform float uGS; uniform float uHeat; uniform float uTime; float h21(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);} void main(){ vec2 uv=vUv; float bY=floor(uv.y*30.)/30.; float bH=h21(vec2(bY,uGS+floor(uTime*26.)*.01)); float tR=step(1.-uG*.44,bH); uv.x=clamp(uv.x+(bH*2.-1.)*.054*tR*uG,0.001,.999); float ab=0.0022+uG*.028+uHeat*.008; float r=texture2D(tSc,uv+vec2(ab,0.)).r; float g=texture2D(tSc,uv).g; float b=texture2D(tSc,uv-vec2(ab,0.)).b; vec3 col=vec3(r,g,b)+texture2D(tBl,vUv).rgb*uBS; col+=((h21(vUv+fract(uTime*.0137))*2.-1.))*.015; vec2 vg=vUv*2.-1.; col*=pow(max(1.-dot(vg*.68,vg*.68),0.),1.1); gl_FragColor=vec4(clamp(col,0.,1.),1.); }`;
+const FRAG_FEEL = `
+precision mediump float;
+varying float vFA;
+uniform float uTime;
+uniform float uMF;
+void main(){
+  float pulse=sin(uTime*10.+vFA*6.28)*.32+.68;
+  float a=vFA*pulse*(0.22+uMF*0.78);
+  /* Brighter green at root when attacking */
+  vec3 c=mix(vec3(0.,.5,0.),vec3(.3,1.,.35),vFA*(0.3+uMF*.7));
+  gl_FragColor=vec4(c,clamp(a,0.,1.));
+}`;
 
 /* ═══════════════════════════════════════════════════════════
-   RENDERER SETUP & GEOMETRY
+   POST-PROCESS SHADERS (4-Pass Pipeline)
+═══════════════════════════════════════════════════════════ */
+const VERT_Q = `varying vec2 vUv;
+void main(){ vUv=position.xy*.5+.5; gl_Position=vec4(position.xy,0.,1.); }`;
+
+const FRAG_BH = `
+precision highp float;
+varying vec2 vUv;
+uniform sampler2D tSc;
+uniform vec2 uTxH;
+uniform float uThr;
+vec3 bs(vec2 uv){
+  vec3 c=texture2D(tSc,uv).rgb;
+  float br=max(c.r,max(c.g,c.b));
+  return c*smoothstep(uThr-.07,uThr+.07,br);
+}
+void main(){
+  float w=uTxH.x;
+  vec3 b=vec3(0.);
+  b+=bs(vUv+vec2(-4.*w,0.))*.051; b+=bs(vUv+vec2(-3.*w,0.))*.0918;
+  b+=bs(vUv+vec2(-2.*w,0.))*.1227;b+=bs(vUv+vec2(-1.*w,0.))*.1633;
+  b+=bs(vUv)*.2041;
+  b+=bs(vUv+vec2(1.*w,0.))*.1633; b+=bs(vUv+vec2(2.*w,0.))*.1227;
+  b+=bs(vUv+vec2(3.*w,0.))*.0918; b+=bs(vUv+vec2(4.*w,0.))*.051;
+  gl_FragColor=vec4(b,1.);
+}`;
+
+const FRAG_BV = `
+precision highp float;
+varying vec2 vUv;
+uniform sampler2D tBH;
+uniform vec2 uTxV;
+void main(){
+  float w=uTxV.y;
+  vec3 b=vec3(0.);
+  b+=texture2D(tBH,vUv+vec2(0.,-4.*w)).rgb*.051;
+  b+=texture2D(tBH,vUv+vec2(0.,-3.*w)).rgb*.0918;
+  b+=texture2D(tBH,vUv+vec2(0.,-2.*w)).rgb*.1227;
+  b+=texture2D(tBH,vUv+vec2(0.,-1.*w)).rgb*.1633;
+  b+=texture2D(tBH,vUv).rgb*.2041;
+  b+=texture2D(tBH,vUv+vec2(0.,1.*w)).rgb*.1633;
+  b+=texture2D(tBH,vUv+vec2(0.,2.*w)).rgb*.1227;
+  b+=texture2D(tBH,vUv+vec2(0.,3.*w)).rgb*.0918;
+  b+=texture2D(tBH,vUv+vec2(0.,4.*w)).rgb*.051;
+  gl_FragColor=vec4(b,1.);
+}`;
+
+const FRAG_COMP = `
+precision highp float;
+varying vec2 vUv;
+uniform sampler2D tSc;
+uniform sampler2D tBl;
+uniform float uBS;
+uniform float uG;
+uniform float uGS;
+uniform float uHeat;
+uniform float uTime;
+float h21(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
+void main(){
+  vec2 uv=vUv;
+  /* Scanline tear */
+  float bY=floor(uv.y*30.)/30.;
+  float bH=h21(vec2(bY,uGS+floor(uTime*26.)*.01));
+  float tR=step(1.-uG*.44,bH);
+  uv.x=clamp(uv.x+(bH*2.-1.)*.054*tR*uG,0.001,.999);
+  /* Chromatic aberration — heat increases split */
+  float ab=0.0022+uG*.028+uHeat*.008;
+  float r=texture2D(tSc,uv+vec2(ab,0.)).r;
+  float g=texture2D(tSc,uv).g;
+  float b=texture2D(tSc,uv-vec2(ab,0.)).b;
+  vec3 col=vec3(r,g,b)+texture2D(tBl,vUv).rgb*uBS;
+  col+=((h21(vUv+fract(uTime*.0137))*2.-1.))*.015;
+  vec2 vg=vUv*2.-1.;
+  col*=pow(max(1.-dot(vg*.68,vg*.68),0.),1.1);
+  gl_FragColor=vec4(clamp(col,0.,1.),1.);
+}`;
+
+/* ═══════════════════════════════════════════════════════════
+   RENDERER SETUP
 ═══════════════════════════════════════════════════════════ */
 const W = innerWidth, H = innerHeight;
 const renderer = new THREE.WebGLRenderer({ antialias:false, alpha:false });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
-renderer.setSize(W, H); renderer.setClearColor(0x000000, 1); renderer.autoClear = false;
+renderer.setSize(W, H);
+renderer.setClearColor(0x000000, 1);
+renderer.autoClear = false;
 document.getElementById('gl').appendChild(renderer.domElement);
 
-const scene = new THREE.Scene(), camera = new THREE.PerspectiveCamera(70, W/H, 0.01, 100); camera.position.z = 3.8;
-const qCam = new THREE.OrthographicCamera(-1,1,1,-1,0,1), qScene = new THREE.Scene(), qGeo = new THREE.PlaneGeometry(2,2);
+const scene  = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(70, W/H, 0.01, 100);
+camera.position.z = 3.8;
 
-function mkRT(w,h){ return new THREE.WebGLRenderTarget(w,h,{ minFilter:THREE.LinearFilter, magFilter:THREE.LinearFilter, format:THREE.RGBAFormat, stencilBuffer:false }); }
-const rtSc = mkRT(W,H), rtBH = mkRT(W>>1,H>>1), rtBV = mkRT(W>>1,H>>1);
+const qCam   = new THREE.OrthographicCamera(-1,1,1,-1,0,1);
+const qScene = new THREE.Scene();
+const qGeo   = new THREE.PlaneGeometry(2,2);
 
-const matBH = new THREE.ShaderMaterial({ vertexShader:VERT_Q, fragmentShader:FRAG_BH, uniforms:{ tSc:{value:null}, uTxH:{value:new THREE.Vector2(5./(W>>1),0)}, uThr:{value:CFG.BLOOM_THRESHOLD} }, depthWrite:false });
-const matBV = new THREE.ShaderMaterial({ vertexShader:VERT_Q, fragmentShader:FRAG_BV, uniforms:{ tBH:{value:null}, uTxV:{value:new THREE.Vector2(0,5./(H>>1))} }, depthWrite:false });
-const compU = { tSc:{value:null}, tBl:{value:null}, uBS:{value:CFG.BLOOM_STRENGTH}, uG:{value:0}, uGS:{value:0}, uHeat:{value:0}, uTime:{value:0} };
-const matComp = new THREE.ShaderMaterial({ vertexShader:VERT_Q, fragmentShader:FRAG_COMP, uniforms:compU, depthWrite:false });
-qScene.add(new THREE.Mesh(qGeo, matComp));
+function mkRT(w,h){ return new THREE.WebGLRenderTarget(w,h,{
+  minFilter:THREE.LinearFilter, magFilter:THREE.LinearFilter,
+  format:THREE.RGBAFormat, stencilBuffer:false }); }
 
-const N = CFG.PARTICLE_N, posA = new Float32Array(N*3), rndA = new Float32Array(N), sclA = new Float32Array(N);
+const rtSc   = mkRT(W,H);
+const rtBH   = mkRT(W>>1,H>>1);
+const rtBV   = mkRT(W>>1,H>>1);
+
+const matBH = new THREE.ShaderMaterial({ vertexShader:VERT_Q, fragmentShader:FRAG_BH,
+  uniforms:{ tSc:{value:null}, uTxH:{value:new THREE.Vector2(5./(W>>1),0)}, uThr:{value:CFG.BLOOM_THRESHOLD} }, depthWrite:false });
+const matBV = new THREE.ShaderMaterial({ vertexShader:VERT_Q, fragmentShader:FRAG_BV,
+  uniforms:{ tBH:{value:null}, uTxV:{value:new THREE.Vector2(0,5./(H>>1))} }, depthWrite:false });
+
+const compU = {
+  tSc:{value:null}, tBl:{value:null},
+  uBS:{value:CFG.BLOOM_STRENGTH},
+  uG:{value:0}, uGS:{value:0},
+  uHeat:{value:0}, uTime:{value:0},
+};
+const matComp = new THREE.ShaderMaterial({ vertexShader:VERT_Q, fragmentShader:FRAG_COMP,
+  uniforms:compU, depthWrite:false });
+const qMesh = new THREE.Mesh(qGeo, matComp);
+qScene.add(qMesh);
+
+/* ═══════════════════════════════════════════════════════════
+   PARTICLE SYSTEM — 52K
+═══════════════════════════════════════════════════════════ */
+const N    = CFG.PARTICLE_N;
+const posA = new Float32Array(N*3);
+const rndA = new Float32Array(N);
+const sclA = new Float32Array(N);
+
 for (let i=0;i<N;i++){
-  const r=Math.cbrt(Math.random())*3.9, phi=Math.acos(2*Math.random()-1), tht=Math.random()*Math.PI*2;
-  posA[i*3]=r*Math.sin(phi)*Math.cos(tht); posA[i*3+1]=r*Math.sin(phi)*Math.sin(tht); posA[i*3+2]=r*Math.cos(phi);
-  rndA[i]=Math.random(); sclA[i]=Math.random()*.9+.1;
+  const r  =Math.cbrt(Math.random())*3.9;
+  const phi=Math.acos(2*Math.random()-1);
+  const tht=Math.random()*Math.PI*2;
+  posA[i*3]=r*Math.sin(phi)*Math.cos(tht);
+  posA[i*3+1]=r*Math.sin(phi)*Math.sin(tht);
+  posA[i*3+2]=r*Math.cos(phi);
+  rndA[i]=Math.random();
+  sclA[i]=Math.random()*.9+.1;
 }
+
 const nexoGeo = new THREE.BufferGeometry();
 nexoGeo.setAttribute('position', new THREE.BufferAttribute(posA,3));
-nexoGeo.setAttribute('aR', new THREE.BufferAttribute(rndA,1)); nexoGeo.setAttribute('aSc', new THREE.BufferAttribute(sclA,1));
-const nexoU = { uTime:{value:0}, uMouse:{value:new THREE.Vector2(0,0)}, uMut:{value:0}, uMF:{value:0}, uHeat:{value:0} };
-const nexo = new THREE.Points(nexoGeo, new THREE.ShaderMaterial({ vertexShader:VERT_NEXO, fragmentShader:FRAG_NEXO, uniforms:nexoU, transparent:true, depthWrite:false, blending:THREE.AdditiveBlending }));
+nexoGeo.setAttribute('aR',       new THREE.BufferAttribute(rndA,1));
+nexoGeo.setAttribute('aSc',      new THREE.BufferAttribute(sclA,1));
+
+const nexoU = {
+  uTime:{value:0}, uMouse:{value:new THREE.Vector2(0,0)},
+  uMut:{value:0}, uMF:{value:0}, uHeat:{value:0},
+};
+const nexoMat = new THREE.ShaderMaterial({
+  vertexShader:VERT_NEXO, fragmentShader:FRAG_NEXO,
+  uniforms:nexoU, transparent:true, depthWrite:false, blending:THREE.AdditiveBlending,
+});
+const nexo = new THREE.Points(nexoGeo, nexoMat);
 scene.add(nexo);
 
-const FN = CFG.FEELER_N, fPos = new Float32Array(FN*2*3), fAlp = new Float32Array(FN*2), fJit = new Float32Array(FN*2);
+/* ═══════════════════════════════════════════════════════════
+   PREDATORY FEELERS — 22 TENDRILS WITH SPASM
+═══════════════════════════════════════════════════════════ */
+const FN   = CFG.FEELER_N;
+const fPos = new Float32Array(FN*2*3);
+const fAlp = new Float32Array(FN*2);
+const fJit = new Float32Array(FN*2);
+
 const feelGeo = new THREE.BufferGeometry();
-feelGeo.setAttribute('position', new THREE.BufferAttribute(fPos,3).setUsage(THREE.DynamicDrawUsage));
-feelGeo.setAttribute('aFA', new THREE.BufferAttribute(fAlp,1).setUsage(THREE.DynamicDrawUsage));
-feelGeo.setAttribute('aFJ', new THREE.BufferAttribute(fJit,1).setUsage(THREE.DynamicDrawUsage));
-const feelMat = new THREE.ShaderMaterial({ vertexShader:VERT_FEEL, fragmentShader:FRAG_FEEL, uniforms:{ uTime:{value:0}, uMF:{value:0} }, transparent:true, depthWrite:false, blending:THREE.AdditiveBlending });
+feelGeo.setAttribute('position',    new THREE.BufferAttribute(fPos,3).setUsage(THREE.DynamicDrawUsage));
+feelGeo.setAttribute('aFA',         new THREE.BufferAttribute(fAlp,1).setUsage(THREE.DynamicDrawUsage));
+feelGeo.setAttribute('aFJ',         new THREE.BufferAttribute(fJit,1).setUsage(THREE.DynamicDrawUsage));
+
+const feelMat = new THREE.ShaderMaterial({
+  vertexShader:VERT_FEEL, fragmentShader:FRAG_FEEL,
+  uniforms:{ uTime:{value:0}, uMF:{value:0} },
+  transparent:true, depthWrite:false, blending:THREE.AdditiveBlending,
+});
 scene.add(new THREE.LineSegments(feelGeo, feelMat));
 
 const fBase=[],fTip=[],fLerpS=[];
 for(let i=0;i<FN;i++){
-  const phi=Math.random()*Math.PI, tht=Math.random()*Math.PI*2, r=1.7+Math.random()*1.9;
+  const phi=Math.random()*Math.PI, tht=Math.random()*Math.PI*2;
+  const r=1.7+Math.random()*1.9;
   fBase.push(new THREE.Vector3(r*Math.sin(phi)*Math.cos(tht),r*Math.sin(phi)*Math.sin(tht),r*Math.cos(phi)));
-  fTip.push(new THREE.Vector3(0,0,0)); fLerpS.push(0.022+Math.random()*.1);
+  fTip.push(new THREE.Vector3(0,0,0));
+  fLerpS.push(0.022+Math.random()*.1);
   fJit[i*2]=Math.random(); fJit[i*2+1]=Math.random();
 }
 feelGeo.attributes.aFJ.needsUpdate = true;
+
 let mouseWorld = new THREE.Vector3(0,0,0);
 
 function updateFeelers(mf,t){
   for(let i=0;i<FN;i++){
     const jt=new THREE.Vector3((Math.random()-.5)*.3,(Math.random()-.5)*.3,0);
     fTip[i].lerp(mouseWorld.clone().add(jt), fLerpS[i]*(0.1+mf));
-    const bi=i*2, b=fBase[i], tp=fTip[i];
+    const bi=i*2;
+    const b=fBase[i],tp=fTip[i];
     fPos[bi*3]=b.x; fPos[bi*3+1]=b.y; fPos[bi*3+2]=b.z;
     fPos[(bi+1)*3]=tp.x; fPos[(bi+1)*3+1]=tp.y; fPos[(bi+1)*3+2]=tp.z;
     fAlp[bi]=0.96; fAlp[bi+1]=0.0;
   }
-  feelGeo.attributes.position.needsUpdate=true; feelGeo.attributes.aFA.needsUpdate=true;
-  feelMat.uniforms.uTime.value=t; feelMat.uniforms.uMF.value=mf;
+  feelGeo.attributes.position.needsUpdate=true;
+  feelGeo.attributes.aFA.needsUpdate=true;
+  feelMat.uniforms.uTime.value=t;
+  feelMat.uniforms.uMF.value=mf;
+}
+/* ═══════════════════════════════════════════════════════════
+   MOUSE / TOUCH CAPTURE (Predatory Tracking)
+═══════════════════════════════════════════════════════════ */
+const mouseNDC   = new THREE.Vector2(0,0);
+let   mouseForce = 0;
+const xhairEl    = document.getElementById('xhair');
+
+function projectMouse(nx,ny){
+  const vec=new THREE.Vector3(nx,ny,0.5).unproject(camera);
+  const dir=vec.sub(camera.position).normalize();
+  const dist=-camera.position.z/dir.z;
+  mouseWorld.copy(camera.position).addScaledVector(dir,dist);
 }
 
-/* ═══════════════════════════════════════════════════════════
-   MOUSE & INTERACTIONS
-═══════════════════════════════════════════════════════════ */
-const mouseNDC = new THREE.Vector2(0,0); let mouseForce = 0; const xhairEl = document.getElementById('xhair');
 function handlePointer(cx,cy){
-  const nx=(cx/innerWidth)*2-1, ny=-(cy/innerHeight)*2+1; mouseNDC.set(nx,ny);
+  const nx=(cx/innerWidth)*2-1, ny=-(cy/innerHeight)*2+1;
+  mouseNDC.set(nx,ny);
   xhairEl.style.left=cx+'px'; xhairEl.style.top=cy+'px';
-  const vec=new THREE.Vector3(nx,ny,0.5).unproject(camera); const dir=vec.sub(camera.position).normalize();
-  mouseWorld.copy(camera.position).addScaledVector(dir,-camera.position.z/dir.z);
+  projectMouse(nx,ny);
   mouseForce=Math.min(mouseForce+0.38,1.0);
-  xhairEl.classList.add('active'); clearTimeout(xhairEl._t); xhairEl._t=setTimeout(()=>xhairEl.classList.remove('active'),300);
+  xhairEl.classList.add('active');
+  clearTimeout(xhairEl._t);
+  xhairEl._t=setTimeout(()=>xhairEl.classList.remove('active'),300);
 }
+
 window.addEventListener('mousemove', e=>handlePointer(e.clientX,e.clientY));
 window.addEventListener('touchmove', e=>handlePointer(e.touches[0].clientX,e.touches[0].clientY),{passive:true});
 
-function triggerGlitch(i=1.0){ compU.uG.value=Math.min(i,1.0); compU.uGS.value=Math.random(); }
+/* ═══════════════════════════════════════════════════════════
+   MUTATION / GLITCH ENGINE
+═══════════════════════════════════════════════════════════ */
+function triggerGlitch(i=1.0){
+  compU.uG.value=Math.min(i,1.0);
+  compU.uGS.value=Math.random();
+}
+
 function triggerMutation(i=1.0){
-  nexoU.uMut.value=Math.min(i,1.0); triggerGlitch(i*.88);
-  const arr=nexoGeo.attributes.position.array, rArr=nexoGeo.attributes.aR.array, cnt=Math.floor(i*1600);
+  nexoU.uMut.value=Math.min(i,1.0);
+  triggerGlitch(i*.88);
+  burstParticles(i);
+}
+
+function burstParticles(i){
+  const arr=nexoGeo.attributes.position.array;
+  const rArr=nexoGeo.attributes.aR.array;
+  const cnt=Math.floor(i*1600);
   for(let k=0;k<cnt;k++){
-    const idx=Math.floor(Math.random()*N), r=0.04+Math.random()*0.3, phi=Math.random()*Math.PI, tht=Math.random()*Math.PI*2;
-    arr[idx*3]=r*Math.sin(phi)*Math.cos(tht); arr[idx*3+1]=r*Math.sin(phi)*Math.sin(tht); arr[idx*3+2]=r*Math.cos(phi);
+    const idx=Math.floor(Math.random()*N);
+    const r=0.04+Math.random()*0.3;
+    const phi=Math.random()*Math.PI, tht=Math.random()*Math.PI*2;
+    arr[idx*3]=r*Math.sin(phi)*Math.cos(tht);
+    arr[idx*3+1]=r*Math.sin(phi)*Math.sin(tht);
+    arr[idx*3+2]=r*Math.cos(phi);
     rArr[idx]=Math.random();
   }
-  nexoGeo.attributes.position.needsUpdate=true; nexoGeo.attributes.aR.needsUpdate=true;
+  nexoGeo.attributes.position.needsUpdate=true;
+  nexoGeo.attributes.aR.needsUpdate=true;
 }
-let heatLevel = 0;
-function addHeat(amount){ heatLevel=Math.min(heatLevel+amount,1.0); triggerGlitch(0.15+heatLevel*0.35); compU.uBS.value=CFG.BLOOM_STRENGTH+heatLevel*4.5; }
 
 /* ═══════════════════════════════════════════════════════════
-   RENDER LOOP & TELEMETRY
+   HEAT ENGINE — Digitação acumula pressão e bloom
 ═══════════════════════════════════════════════════════════ */
-const termEl = document.getElementById('term'); let lastT = 0;
+let heatLevel = 0;
+
+function addHeat(amount){
+  heatLevel = Math.min(heatLevel + amount, 1.0);
+  triggerGlitch(0.15 + heatLevel * 0.35);
+  compU.uBS.value = CFG.BLOOM_STRENGTH + heatLevel * 4.5;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   TELEMETRY UPDATE
+═══════════════════════════════════════════════════════════ */
 const tRows=[
-  {f:'b0',v:'v0',base:81,ph:0.0,fmt:x=>x.toFixed(2)}, {f:'b1',v:'v1',base:44,ph:1.5,fmt:x=>x.toFixed(2)},
-  {f:'b2',v:'v2',base:94,ph:3.0,fmt:x=>x.toFixed(2)}, {f:'heat-bar',v:'v3',base:0,ph:0,fmt:()=>(heatLevel).toFixed(2)},
-  {f:'b4',v:'v4',base:100,ph:4.5,fmt:()=>'52K'}
+  {f:'b0',v:'v0',base:81,ph:0.0,fmt:x=>x.toFixed(2)},
+  {f:'b1',v:'v1',base:44,ph:1.5,fmt:x=>x.toFixed(2)},
+  {f:'b2',v:'v2',base:94,ph:3.0,fmt:x=>x.toFixed(2)},
+  {f:'heat-bar',v:'v3',base:0, ph:0, fmt:()=>(heatLevel).toFixed(2)},
+  {f:'b4',v:'v4',base:100,ph:4.5,fmt:()=>'52K'},
 ];
 tRows.forEach(r=>{r.fe=document.getElementById(r.f);r.ve=document.getElementById(r.v);});
 
-(function animate(ts){
-  requestAnimationFrame(animate); const t=ts*.001, dt=Math.min(t-lastT,0.05); lastT=t;
-  mouseForce=Math.max(0,mouseForce-dt*1.6); heatLevel=Math.max(0,heatLevel-dt*0.22);
-  nexoU.uMut.value*=0.960; compU.uG.value*=0.932;
-  nexoU.uTime.value=t; nexoU.uMouse.value.lerp(mouseNDC,0.036); nexoU.uMF.value=mouseForce; nexoU.uHeat.value=heatLevel;
-  compU.uTime.value=t; compU.uHeat.value=heatLevel;
-  nexo.rotation.y+=0.00056; nexo.rotation.x+=0.00019;
-  updateFeelers(mouseForce,t);
-  
+function tickTelem(t,mut){
   tRows.forEach((r,i)=>{
     if(i===3){r.fe.style.width=(heatLevel*100).toFixed(1)+'%';r.ve.textContent=r.fmt();return;}
     if(i===4){r.fe.style.width='100%';r.ve.textContent='52K';return;}
-    const v=r.base+Math.sin(t*.58+r.ph)*5+nexoU.uMut.value*14; const cl=Math.min(100,Math.max(5,v));
-    r.fe.style.width=cl.toFixed(1)+'%'; r.ve.textContent=r.fmt(cl/100);
+    const v=r.base+Math.sin(t*.58+r.ph)*5+mut*14;
+    const cl=Math.min(100,Math.max(5,v));
+    r.fe.style.width=cl.toFixed(1)+'%';
+    r.ve.textContent=r.fmt(cl/100);
   });
+}
 
-  const iL=(Math.sin(t*.52)*.5+.5)*.3+nexoU.uMut.value*.88+mouseForce*.3+heatLevel*.6;
+/* ═══════════════════════════════════════════════════════════
+   RENDER LOOP — 4 PASSES (Scene -> Bloom H -> Bloom V -> Comp)
+═══════════════════════════════════════════════════════════ */
+const termEl = document.getElementById('term');
+let lastT = 0;
+
+(function animate(ts){
+  requestAnimationFrame(animate);
+  const t=ts*.001, dt=Math.min(t-lastT,0.05); lastT=t;
+
+  mouseForce=Math.max(0,mouseForce-dt*1.6);
+  heatLevel =Math.max(0,heatLevel -dt*0.22);
+  nexoU.uMut.value*=0.960;
+  compU.uG.value  *=0.932;
+
+  nexoU.uTime.value=t;
+  nexoU.uMouse.value.lerp(mouseNDC,0.036);
+  nexoU.uMF.value  =mouseForce;
+  nexoU.uHeat.value=heatLevel;
+  compU.uTime.value=t;
+  compU.uHeat.value=heatLevel;
+
+  nexo.rotation.y+=0.00056;
+  nexo.rotation.x+=0.00019;
+
+  updateFeelers(mouseForce,t);
+  tickTelem(t,nexoU.uMut.value);
+
+  /* Terminal breath sync (Pulsar a luz do terminal) */
+  const breath=Math.sin(t*.52)*.5+.5;
+  const iL=breath*.3+nexoU.uMut.value*.88+mouseForce*.3+heatLevel*.6;
   termEl.style.filter=`brightness(${(1+iL*.6).toFixed(2)}) drop-shadow(0 0 ${(iL*26).toFixed(1)}px rgba(0,255,0,0.48))`;
-  const mut=nexoU.uMut.value; termEl.style.transform=(mut>.35||heatLevel>.6)?`translate(${(Math.random()-.5)*(mut+heatLevel*.5)*7}px,${(Math.random()-.5)*(mut+heatLevel*.5)*3}px)`:'';
+  const mut=nexoU.uMut.value;
+  termEl.style.transform=(mut>.35||heatLevel>.6)
+    ?`translate(${(Math.random()-.5)*(mut+heatLevel*.5)*7}px,${(Math.random()-.5)*(mut+heatLevel*.5)*3}px)`
+    :'';
 
-  renderer.setRenderTarget(rtSc); renderer.clear(true,true,false); renderer.render(scene,camera);
-  matBH.uniforms.tSc.value=rtSc.texture; qScene.children[0].material=matBH; renderer.setRenderTarget(rtBH); renderer.clear(true,true,false); renderer.render(qScene,qCam);
-  matBV.uniforms.tBH.value=rtBH.texture; qScene.children[0].material=matBV; renderer.setRenderTarget(rtBV); renderer.clear(true,true,false); renderer.render(qScene,qCam);
-  compU.tSc.value=rtSc.texture; compU.tBl.value=rtBV.texture; qScene.children[0].material=matComp; renderer.setRenderTarget(null); renderer.clear(true,true,false); renderer.render(qScene,qCam);
+  /* Pass 1: Render Scene */
+  renderer.setRenderTarget(rtSc);
+  renderer.clear(true,true,false);
+  renderer.render(scene,camera);
+
+  /* Pass 2: Bloom Horizontal */
+  matBH.uniforms.tSc.value=rtSc.texture;
+  qMesh.material=matBH;
+  renderer.setRenderTarget(rtBH);
+  renderer.clear(true,true,false);
+  renderer.render(qScene,qCam);
+
+  /* Pass 3: Bloom Vertical */
+  matBV.uniforms.tBH.value=rtBH.texture;
+  qMesh.material=matBV;
+  renderer.setRenderTarget(rtBV);
+  renderer.clear(true,true,false);
+  renderer.render(qScene,qCam);
+
+  /* Pass 4: Composite to Screen */
+  compU.tSc.value=rtSc.texture;
+  compU.tBl.value=rtBV.texture;
+  qMesh.material=matComp;
+  renderer.setRenderTarget(null);
+  renderer.clear(true,true,false);
+  renderer.render(qScene,qCam);
 })(0);
 
 window.addEventListener('resize',()=>{
-  camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth,innerHeight);
-  rtSc.setSize(innerWidth,innerHeight); rtBH.setSize(innerWidth>>1,innerHeight>>1); rtBV.setSize(innerWidth>>1,innerHeight>>1);
-  matBH.uniforms.uTxH.value.set(5./(innerWidth>>1),0); matBV.uniforms.uTxV.value.set(0,5./(innerHeight>>1));
+  const w=innerWidth,h=innerHeight;
+  camera.aspect=w/h; camera.updateProjectionMatrix();
+  renderer.setSize(w,h);
+  rtSc.setSize(w,h); rtBH.setSize(w>>1,h>>1); rtBV.setSize(w>>1,h>>1);
+  matBH.uniforms.uTxH.value.set(5./(w>>1),0);
+  matBV.uniforms.uTxV.value.set(0,5./(h>>1));
 });
 /* ═══════════════════════════════════════════════════════════
    TERMINAL & INTELLIGENCE CORE (GROQ)
