@@ -375,7 +375,7 @@ html,body{
 const CFG = {
   N:        52000,
   MODEL_AN: 'claude-sonnet-4-20250514',
-  MODEL_GR: 'llama-3.1-70b-versatile',
+  MODEL_GR: 'llama-3.3-70b-versatile',
   PROXY:    '',
 };
 
@@ -500,14 +500,21 @@ void main(){
   vRnd=aR;
   float aspect=uRes.x/uRes.y;
   vB=(1.-clamp(vD/6.5,0.,1.))+vDnd*.9+isSpk*2.4+uMut*.95+uH*.7+uMF*mE*.5;
-  /* Project: simple perspective z=3.8 */
-  float fov=1.19175; /* tan(70/2 * PI/180) */
-  float z=pos.z+3.8;
-  float px=pos.x/(z*fov);
-  float py=pos.y/(z*fov*aspect);
-  float sz=(aSc*5.5+vB*3.2+uMut*5.5+isSpk*11.+uH*4.)*220./z;
-  gl_PointSize=clamp(sz,.3,42.);
-  gl_Position=vec4(px,py,-1.+2./z,.999);
+  /* Correct perspective projection — camera at z=3.8, FOV 70deg */
+  /* vz = view-space depth (positive = in front of camera)        */
+  /* Perspective: camera at z=4.8, FOV ~75deg, portrait-safe */
+  float vz = 4.8 - pos.z;
+  if(vz < 0.12){
+    gl_Position = vec4(5.0,5.0,5.0,1.0);
+    gl_PointSize = 0.0;
+    return;
+  }
+  float f   = 1.303; /* 1/tan(37.5 * PI/180) */
+  float ndx = pos.x * f / (vz * aspect);
+  float ndy = pos.y * f / vz;
+  float sz  = (aSc*5.5+vB*3.5+uMut*5.5+isSpk*12.+uH*4.5)*220./vz;
+  gl_PointSize = clamp(sz, 0.5, 48.0);
+  gl_Position  = vec4(ndx, ndy, 0.5, 1.0);
 }`;
 
 const FRAG_SRC = `
@@ -594,12 +601,10 @@ void main(){
   vec3 p=aFP;
   float sp=uMF2*uMF2*sin(uT*28.+aFA*6.28)*0.22;
   p.x+=sp*(1.-aFA);p.y+=sp*(1.-aFA)*.7;
-  float fov=1.19175;
-  float aspect=1.0; /* corrected in JS via uAsp */
-  float z=p.z+3.8;
-  float px2=p.x/(z*fov);
-  float py2=p.y/(z*fov);
-  gl_Position=vec4(px2,py2,-1.+2./z,.999);
+  float vz2 = 4.8 - p.z; if(vz2<0.12){ gl_Position=vec4(5.,5.,5.,1.); return; }
+  float px2  = p.x * 1.4281 / (vz2 * 0.5625);
+  float py2  = p.y * 1.4281 / vz2;
+  gl_Position = vec4(px2, py2, 0.5, 1.0);
 }`;
 
 const FRAG_FEEL = `
@@ -642,6 +647,8 @@ function initGL() {
   if (!gl) { document.body.style.background='#001100'; console.error('WebGL unavailable'); return false; }
 
   gl.enable(gl.BLEND);
+  /* Required on some WebGL implementations for gl_PointSize in shaders */
+  try { gl.enable(0x8642); } catch(_){} /* VERTEX_PROGRAM_POINT_SIZE */
   gl.blendFunc(gl.ONE, gl.ONE); /* additive */
   gl.clearColor(0, 0, 0, 1);
   gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
@@ -679,7 +686,7 @@ function initGL() {
   const rnd = new Float32Array(N);
   const scl = new Float32Array(N);
   for (let i = 0; i < N; i++) {
-    const r   = Math.cbrt(Math.random()) * 3.5;
+    const r   = Math.cbrt(Math.random()) * 3.2;
     const phi = Math.acos(2 * Math.random() - 1);
     const tht = Math.random() * Math.PI * 2;
     pos[i*3]   = r * Math.sin(phi) * Math.cos(tht);
