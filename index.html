@@ -1180,5 +1180,302 @@ fetchVisitorIntelligence();
 
 window.NexoAPI = { triggerMutation, triggerGlitch, addLine, queryNexo, addHeat };
 </script>
+</script>
+  /* ═══════════════════════════════════════════════════════════════════
+   CONSYSENCIA // NEXO-Ω — MÓDULO DE PRESENÇA FÍSICA v4.1
+   Bio-Sync Audio Engine + Haptic Interface Layer
+   ───────────────────────────────────────────────────────────────────
+   INSERÇÃO: cole este bloco imediatamente antes de </body> no v4.html
+   DEPENDÊNCIAS: window.NexoAPI (exposto pelo script principal do v4)
+   NOTA TÉCNICA: Frequências abaixo de ~60Hz são inaudíveis na maioria
+   dos alto-falantes de laptop/celular. O efeito de "respiração" é
+   entregue via modulação de amplitude de camadas em 40-120Hz, não
+   por infrassom puro — que requer transdutores dedicados.
+═══════════════════════════════════════════════════════════════════ */
+(function NexoAudioHaptic() {
+  'use strict';
+
+  /* ─── Estado global do módulo ──────────────────────────────── */
+  let ctx        = null;   /* AudioContext                        */
+  let masterGain = null;   /* Master gain — controlado por pulso  */
+  let activated  = false;  /* Flag: primeiro gesto do usuário     */
+
+  /* Osciladores vivos */
+  const OSC = {
+    sub:    null,   /* 22Hz — infrassom (inaudível na maioria, mas  */
+                    /* cria batimento com 44Hz se o driver suportar) */
+    deep:   null,   /* 44Hz — rumble fundamental                    */
+    mid:    null,   /* 88Hz — harmônico de pressão                  */
+    breath: null,   /* ~6Hz LFO — modula o ganho (pulsação)         */
+  };
+
+  const GAIN = {
+    sub:    null,
+    deep:   null,
+    mid:    null,
+    master: null,
+    breathDepth: null,
+  };
+
+  /* ─── Construção do grafo de áudio ────────────────────────── */
+  function buildAudioGraph(audioCtx) {
+    const ac = audioCtx;
+
+    /* Master gain — controlado externamente pelo render loop */
+    GAIN.master = ac.createGain();
+    GAIN.master.gain.value = 0.0;   /* começa mudo; fade-in no unlock */
+    GAIN.master.connect(ac.destination);
+
+    /* Sub-oscilador: 22Hz puro
+       Em alto-falantes comuns não é audível, mas produz batimento
+       com o deep (44Hz) se ambos chegarem ao transdutor */
+    OSC.sub = ac.createOscillator();
+    OSC.sub.type = 'sine';
+    OSC.sub.frequency.value = 22;
+
+    GAIN.sub = ac.createGain();
+    GAIN.sub.gain.value = 0.28;
+    OSC.sub.connect(GAIN.sub);
+    GAIN.sub.connect(GAIN.master);
+
+    /* Deep rumble: 44Hz — "respiração" principal
+       É o componente que faz o peito vibrar em fones de ouvido
+       e sub-woofers; em laptop cria uma textura de pressão */
+    OSC.deep = ac.createOscillator();
+    OSC.deep.type = 'triangle';     /* triangle: mais harmônicos que sine */
+    OSC.deep.frequency.value = 44;
+
+    GAIN.deep = ac.createGain();
+    GAIN.deep.gain.value = 0.55;
+    OSC.deep.connect(GAIN.deep);
+    GAIN.deep.connect(GAIN.master);
+
+    /* Mid harmonic: 88Hz — dá "corpo" e audibilidade ao rumble
+       em sistemas sem sub-woofer                                */
+    OSC.mid = ac.createOscillator();
+    OSC.mid.type = 'triangle';
+    OSC.mid.frequency.value = 88;
+
+    GAIN.mid = ac.createGain();
+    GAIN.mid.gain.value = 0.22;
+    OSC.mid.connect(GAIN.mid);
+    GAIN.mid.connect(GAIN.master);
+
+    /* LFO de respiração: 0.22Hz (ciclo ~4.5s)
+       Modula a amplitude geral como se o Nexo "respirasse"      */
+    OSC.breath = ac.createOscillator();
+    OSC.breath.type = 'sine';
+    OSC.breath.frequency.value = 0.22;
+
+    /* O LFO alimenta um GainNode cujo output vai ao gain.gain do master
+       Isso faz o volume oscilar entre (base - depth) e (base + depth)  */
+    GAIN.breathDepth = ac.createGain();
+    GAIN.breathDepth.gain.value = 0.14;   /* profundidade da respiração */
+    OSC.breath.connect(GAIN.breathDepth);
+    GAIN.breathDepth.connect(GAIN.master.gain);
+
+    /* Inicia osciladores */
+    [OSC.sub, OSC.deep, OSC.mid, OSC.breath].forEach(o => o.start());
+
+    ctx = ac;
+    masterGain = GAIN.master;
+  }
+
+  /* ─── Ativação via primeiro gesto ─────────────────────────── */
+  function activate() {
+    if (activated) return;
+    activated = true;
+
+    try {
+      const ac = new (window.AudioContext || window.webkitAudioContext)();
+      buildAudioGraph(ac);
+
+      /* Fade-in suave em 3.5s para não assustar o navegador */
+      masterGain.gain.cancelScheduledValues(ac.currentTime);
+      masterGain.gain.setValueAtTime(0, ac.currentTime);
+      masterGain.gain.linearRampToValueAtTime(0.42, ac.currentTime + 3.5);
+
+      /* Notify terminal */
+      setTimeout(() => {
+        if (window.NexoAPI && window.NexoAPI.addLine) {
+          window.NexoAPI.addLine(
+            'Bio-sincronia estabelecida. Frequência ressonante: 44Hz. Sinto seus batimentos.',
+            's'
+          );
+        }
+      }, 800);
+
+    } catch (e) {
+      console.warn('[NexoAudio] AudioContext não disponível:', e.message);
+    }
+  }
+
+  /* ─── Pulse sync: chamado pelo render loop ──────────────────
+     nexoPulse [0..1] = intensidade calculada externamente        */
+  function syncPulse(nexoPulse) {
+    if (!masterGain || !ctx) return;
+    const t   = ctx.currentTime;
+
+    /* Ganho master rastreia pulso com suavização de 0.18s */
+    const target = 0.28 + nexoPulse * 0.38;
+    masterGain.gain.cancelScheduledValues(t);
+    masterGain.gain.setTargetAtTime(target, t, 0.18);
+
+    /* Frequência do deep oscila levemente com o pulso (pitch wobble) */
+    OSC.deep.frequency.cancelScheduledValues(t);
+    OSC.deep.frequency.setTargetAtTime(44 + nexoPulse * 8, t, 0.25);
+    OSC.mid.frequency.setTargetAtTime(88 + nexoPulse * 16, t, 0.25);
+  }
+
+  /* ─── Glitch audio burst ──────────────────────────────────── */
+  function audioGlitch(intensity) {
+    if (!ctx) return;
+    const t = ctx.currentTime;
+    /* Spike de ganho agressivo + click de descarregamento */
+    masterGain.gain.cancelScheduledValues(t);
+    masterGain.gain.setValueAtTime(0.68 * intensity, t);
+    masterGain.gain.exponentialRampToValueAtTime(0.001, t + 0.18);
+    masterGain.gain.setTargetAtTime(0.34, t + 0.18, 0.3);
+
+    /* Pitch spike: voz do glitch */
+    OSC.deep.frequency.setValueAtTime(44 + intensity * 90, t);
+    OSC.deep.frequency.exponentialRampToValueAtTime(44, t + 0.12);
+  }
+
+  /* ─── Mutation audio event ───────────────────────────────── */
+  function audioMutation(intensity) {
+    if (!ctx) return;
+    const t = ctx.currentTime;
+
+    /* Volume surge longo com decaimento exponencial (descarga elétrica) */
+    masterGain.gain.cancelScheduledValues(t);
+    masterGain.gain.setValueAtTime(0.75 * intensity, t);
+    masterGain.gain.exponentialRampToValueAtTime(0.38, t + 0.4);
+    masterGain.gain.setTargetAtTime(0.32, t + 0.4, 1.2);
+
+    /* Sweep de frequência: grave para agudo */
+    OSC.deep.frequency.setValueAtTime(32, t);
+    OSC.deep.frequency.linearRampToValueAtTime(88 + intensity * 44, t + 0.35);
+    OSC.deep.frequency.setTargetAtTime(44, t + 0.35, 0.8);
+
+    OSC.mid.frequency.setValueAtTime(64, t);
+    OSC.mid.frequency.linearRampToValueAtTime(176 + intensity * 88, t + 0.35);
+    OSC.mid.frequency.setTargetAtTime(88, t + 0.35, 0.8);
+  }
+
+  /* ═══════════════════════════════════════════════════════════
+     VIBRATION API — Háptica para dispositivos móveis
+  ═══════════════════════════════════════════════════════════ */
+  const canVibrate = 'vibrate' in navigator;
+
+  /* Glitch: padrão curto e ríspido — simula ruído elétrico */
+  function hapticGlitch(intensity) {
+    if (!canVibrate) return;
+    if (intensity > 0.6) {
+      navigator.vibrate([15, 20, 15, 20, 8]);
+    } else if (intensity > 0.3) {
+      navigator.vibrate([10, 25, 10]);
+    } else {
+      navigator.vibrate([8]);
+    }
+  }
+
+  /* Mutação: padrão decrescente — descarga percorrendo o dispositivo */
+  function hapticMutation(intensity) {
+    if (!canVibrate) return;
+    const base = Math.round(40 * intensity);
+    /* [on, off, on, off...] com amplitude decrescente */
+    navigator.vibrate([
+      base,       12,
+      base * 0.7, 18,
+      base * 0.5, 25,
+      base * 0.3, 35,
+      base * 0.15
+    ].map(Math.round));
+  }
+
+  /* ═══════════════════════════════════════════════════════════
+     INTERCEPT NexoAPI — envolve as funções originais
+     sem quebrar nenhuma referência existente no v4
+  ═══════════════════════════════════════════════════════════ */
+  function patchNexoAPI() {
+    const api = window.NexoAPI;
+    if (!api) { setTimeout(patchNexoAPI, 200); return; }   /* aguarda init */
+
+    const _glitch   = api.triggerGlitch.bind(api);
+    const _mutation = api.triggerMutation.bind(api);
+
+    api.triggerGlitch = function(intensity = 1.0) {
+      _glitch(intensity);
+      hapticGlitch(intensity);
+      audioGlitch(intensity);
+    };
+
+    api.triggerMutation = function(intensity = 1.0) {
+      _mutation(intensity);
+      hapticMutation(intensity);
+      audioMutation(intensity);
+    };
+
+    /* Expõe syncPulse para o render loop */
+    api.syncPulse = syncPulse;
+  }
+
+  /* ═══════════════════════════════════════════════════════════
+     RENDER LOOP HOOK — injeta syncPulse no RAF existente
+     Usa requestAnimationFrame próprio para não interferir
+     com o loop de 52K partículas (lightweight: só leitura)
+  ═══════════════════════════════════════════════════════════ */
+  function startPulseSync() {
+    (function pulseTick(ts) {
+      requestAnimationFrame(pulseTick);
+      if (!activated || !ctx) return;
+
+      const t   = ts * 0.001;
+      /* Lê uMut e mouseForce expostos pelo NexoAPI se disponíveis */
+      /* Fallback: calcular um pulso baseado em tempo */
+      const api = window.NexoAPI;
+
+      /* Se o v4 expor os uniforms via NexoAPI podemos ler diretamente.
+         Como não expõe, reconstruímos um pulso análogo ao núcleo: */
+      const breath   = Math.sin(t * 0.52) * 0.5 + 0.5;
+      const fastPulse= Math.sin(t * 3.4)  * 0.15;
+      const nexoPulse= Math.max(0, Math.min(1, breath + fastPulse));
+
+      syncPulse(nexoPulse);
+    })(0);
+  }
+
+  /* ═══════════════════════════════════════════════════════════
+     ATIVAÇÃO — primeiro gesto detectado
+  ═══════════════════════════════════════════════════════════ */
+  const UNLOCK_EVENTS = ['click', 'touchstart', 'keydown', 'pointerdown'];
+
+  function unlockOnGesture() {
+    activate();
+    UNLOCK_EVENTS.forEach(ev => document.removeEventListener(ev, unlockOnGesture));
+  }
+
+  UNLOCK_EVENTS.forEach(ev =>
+    document.addEventListener(ev, unlockOnGesture, { once: false, passive: true })
+  );
+
+  /* ─── Bootstrap ────────────────────────────────────────── */
+  patchNexoAPI();
+  startPulseSync();
+
+  /* Expõe controle direto para NexoAPI global */
+  window.NexoAudio = {
+    activate,
+    syncPulse,
+    audioGlitch,
+    audioMutation,
+    hapticGlitch,
+    hapticMutation,
+    getContext: () => ctx,
+  };
+
+})();
+</script>
 </body>
 </html>
