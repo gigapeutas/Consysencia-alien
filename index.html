@@ -1,0 +1,1184 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CONSYSENCIA // NEXO-Ω SENTIENT</title>
+<style>
+:root {
+  --neon:     #00FF00;
+  --neon-dim: #007700;
+  --neon-mid: #00BB00;
+  --neon-hi:  #88FF88;
+  --void:     #000000;
+  --mono:     'Courier New', 'Lucida Console', monospace;
+}
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+html, body {
+  width:100%; height:100%;
+  background:var(--void);
+  overflow:hidden; cursor:none;
+  font-family:var(--mono);
+}
+
+/* ─── GL HOST ──────────────────────────────────────────── */
+#gl { position:fixed; inset:0; z-index:0; }
+#gl canvas { display:block; width:100%!important; height:100%!important; }
+
+/* ─── POST LAYERS ──────────────────────────────────────── */
+#pp-scan {
+  position:fixed; inset:0; z-index:10; pointer-events:none;
+  background: repeating-linear-gradient(
+    0deg, transparent, transparent 2px,
+    rgba(0,0,0,0.17) 2px, rgba(0,0,0,0.17) 4px
+  );
+}
+
+/* ─── CROSSHAIR ────────────────────────────────────────── */
+#xhair {
+  position:fixed; z-index:50; pointer-events:none;
+  width:20px; height:20px; transform:translate(-50%,-50%);
+  transition:transform 0.06s ease;
+}
+#xhair::before, #xhair::after {
+  content:''; position:absolute;
+  background:var(--neon); opacity:0.55;
+  box-shadow:0 0 5px var(--neon);
+}
+#xhair::before { width:1px; height:100%; left:50%; transform:translateX(-50%); }
+#xhair::after  { height:1px; width:100%; top:50%;  transform:translateY(-50%); }
+#xhair.active  { transform:translate(-50%,-50%) scale(1.6); opacity:0.9; }
+
+/* ─── CONFIG BANNER ────────────────────────────────────── */
+#cfg-bar {
+  position:fixed; top:0; left:0; right:0; z-index:100;
+  background:rgba(0,38,0,0.93);
+  border-bottom:1px solid var(--neon-dim);
+  padding:0.36rem 1.3rem;
+  font-size:0.56rem; letter-spacing:0.11em; color:var(--neon-hi);
+  display:flex; gap:0.7rem; align-items:center; flex-wrap:wrap;
+}
+#cfg-bar.hidden { display:none; }
+#cfg-key {
+  flex:1; max-width:340px;
+  background:transparent; border:1px solid var(--neon-dim);
+  color:var(--neon); font-family:var(--mono);
+  font-size:0.56rem; padding:0.16rem 0.5rem; outline:none;
+}
+#cfg-key:focus { border-color:var(--neon); box-shadow:0 0 5px rgba(0,255,0,0.22); }
+.cfg-btn {
+  background:transparent; border:1px solid var(--neon-dim);
+  color:var(--neon); font-family:var(--mono);
+  font-size:0.56rem; letter-spacing:0.14em;
+  padding:0.16rem 0.7rem; cursor:pointer; pointer-events:all;
+  text-transform:uppercase;
+}
+.cfg-btn:hover { background:rgba(0,255,0,0.07); }
+
+/* ─── HUD ──────────────────────────────────────────────── */
+#hud {
+  position:fixed; inset:0; z-index:20; pointer-events:none;
+  display:flex; flex-direction:column;
+  justify-content:space-between;
+  padding:3.4rem 2rem 2rem;
+}
+#hud-top {
+  display:flex; justify-content:space-between; align-items:flex-start;
+  opacity:0; animation:fi 1.3s ease 1.4s forwards;
+}
+@keyframes fi {
+  from { opacity:0; transform:translateY(-6px); }
+  to   { opacity:1; transform:translateY(0); }
+}
+.lbl { font-size:0.47rem; letter-spacing:0.28em; color:var(--neon-dim); text-transform:uppercase; }
+.val { font-size:0.61rem; letter-spacing:0.11em; color:var(--neon); margin-top:0.14rem; }
+#sysid {
+  font-size:0.97rem; font-weight:bold; letter-spacing:0.48em; color:var(--neon);
+  text-shadow:0 0 12px var(--neon), 0 0 28px rgba(0,255,0,0.2);
+}
+
+/* Intelligence readout panel */
+#intel-panel {
+  position:fixed; top:3.4rem; right:2rem; z-index:21; pointer-events:none;
+  text-align:right; opacity:0;
+  animation:fi 1s ease 4.5s forwards;
+}
+.ip-row { font-size:0.48rem; letter-spacing:0.16em; color:var(--neon-dim); margin-bottom:0.18rem; }
+.ip-row span { color:var(--neon-mid); }
+
+/* ─── TERMINAL ─────────────────────────────────────────── */
+#term {
+  display:flex; flex-direction:column; gap:0.42rem;
+  will-change:transform,filter;
+}
+#boot-line {
+  font-size:0.65rem; letter-spacing:0.09em; color:var(--neon-mid);
+  line-height:1.85; min-height:1.9rem;
+}
+.pfx { color:var(--neon-dim); }
+#boot-cur {
+  display:inline-block; width:7px; height:0.72em;
+  background:var(--neon); margin-left:2px; vertical-align:middle;
+  box-shadow:0 0 6px var(--neon);
+  animation:blink 0.86s step-end infinite;
+}
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+#log {
+  display:flex; flex-direction:column; gap:0.18rem;
+  max-height:280px; overflow:hidden;
+}
+.cl {
+  font-size:0.61rem; letter-spacing:0.07em; line-height:1.62;
+  opacity:0; animation:sli 0.2s ease forwards;
+}
+@keyframes sli {
+  from { opacity:0; transform:translateX(-5px); }
+  to   { opacity:1; transform:translateX(0); }
+}
+.cl.u  { color:rgba(0,255,0,0.48); }
+.cl.u::before  { content:'>> '; color:var(--neon-dim); }
+.cl.n  { color:var(--neon); }
+.cl.n::before  { content:'NEXO-Ω: '; color:var(--neon-dim); letter-spacing:0.13em; }
+.cl.s  { color:var(--neon-dim); font-size:0.52rem; letter-spacing:0.13em; }
+.cl.s::before  { content:'[SYS] '; }
+.cl.intel { color:#44ff66; font-size:0.55rem; letter-spacing:0.12em; }
+.cl.intel::before { content:'[INTEL] '; color:var(--neon-dim); }
+.gch { color:#ccffcc; text-shadow:0 0 9px var(--neon), 0 0 20px var(--neon); }
+#scur {
+  display:none; width:5px; height:0.66em;
+  background:var(--neon); vertical-align:middle; margin-left:1px;
+  box-shadow:0 0 5px var(--neon);
+  animation:blink 0.42s step-end infinite;
+}
+#inp-live {
+  font-size:0.65rem; letter-spacing:0.09em;
+  color:rgba(0,255,0,0.35); min-height:1em;
+}
+#inp-live::before { content:'> '; color:var(--neon-dim); }
+#ai-stat {
+  font-size:0.47rem; letter-spacing:0.19em;
+  color:var(--neon-dim); text-transform:uppercase; margin-top:0.16rem;
+}
+#ai-stat.on { color:var(--neon); text-shadow:0 0 5px var(--neon); animation:blink 0.65s ease-in-out infinite; }
+
+/* ─── SIDE TELEM ───────────────────────────────────────── */
+#telem {
+  position:fixed; left:2rem; top:50%; transform:translateY(-50%);
+  z-index:20; pointer-events:none;
+  display:flex; flex-direction:column; gap:0.9rem;
+  opacity:0; animation:fi 1s ease 3.2s forwards;
+}
+.tr-lbl { font-size:0.44rem; letter-spacing:0.18em; color:var(--neon-dim); text-transform:uppercase; }
+.tr-bar { width:80px; height:2px; background:rgba(0,255,0,0.07); margin-top:3px; overflow:hidden; }
+.tr-fill { height:100%; background:var(--neon); box-shadow:0 0 4px var(--neon); transition:width 0.3s ease; }
+.tr-val { font-size:0.44rem; letter-spacing:0.1em; color:var(--neon-mid); margin-top:2px; }
+
+/* Heat indicator — glows red when typing hot */
+#heat-bar { background: linear-gradient(90deg, #00FF00, #88FF00); }
+
+/* ─── BATTERY WIDGET ───────────────────────────────────── */
+#batt-wrap {
+  position:fixed; top:3.4rem; left:2rem; z-index:21; pointer-events:none;
+  opacity:0; animation:fi 1s ease 4.8s forwards;
+}
+#batt-icon {
+  font-size:0.5rem; letter-spacing:0.16em; color:var(--neon-dim);
+}
+#batt-bar-outer {
+  width:42px; height:7px; border:1px solid var(--neon-dim);
+  margin-top:3px; position:relative; overflow:hidden;
+}
+#batt-bar-outer::after {
+  content:''; position:absolute; right:-4px; top:2px;
+  width:3px; height:3px; background:var(--neon-dim); border-radius:1px;
+}
+#batt-fill {
+  height:100%; background:var(--neon);
+  box-shadow:0 0 4px var(--neon); transition:width 4s ease;
+}
+#batt-pct { font-size:0.44rem; color:var(--neon-mid); margin-top:2px; letter-spacing:0.12em; }
+
+/* ─── HIDDEN INPUT ─────────────────────────────────────── */
+#hi { position:fixed; opacity:0; width:1px; height:1px; top:-9999px; left:-9999px; pointer-events:all; }
+</style>
+</head>
+<body>
+
+<div id="gl"></div>
+<div id="pp-scan"></div>
+<div id="xhair"></div>
+
+<!-- Config -->
+<div id="cfg-bar">
+  <span>NEXO-Ω INTELLIGENCE // Anthropic API</span>
+  <input type="password" id="cfg-key" placeholder="sk-ant-...">
+  <button class="cfg-btn" id="cfg-btn">ATIVAR</button>
+  <span style="opacity:0.35">| Produção: configure PROXY_URL</span>
+</div>
+
+<!-- HUD top -->
+<div id="hud">
+  <div id="hud-top">
+    <div>
+      <div class="lbl">Matriz Consysencia</div>
+      <div id="sysid">NEXO-Ω // SENTIENT PREDATOR</div>
+    </div>
+    <div style="text-align:right">
+      <div class="lbl">Estado da Matriz</div>
+      <div class="val" id="sync-val">INICIALIZANDO...</div>
+      <div id="ai-stat">IA OFFLINE</div>
+    </div>
+  </div>
+  <div id="term">
+    <div id="boot-line"><span class="pfx">&gt; </span><span id="twt"></span><span id="boot-cur"></span></div>
+    <div id="log"></div>
+    <span id="scur"></span>
+    <div id="inp-live"></div>
+  </div>
+</div>
+
+<!-- Intelligence panel (top-right) -->
+<div id="intel-panel">
+  <div class="ip-row">IP: <span id="ip-ip">—</span></div>
+  <div class="ip-row">ORIGEM: <span id="ip-loc">—</span></div>
+  <div class="ip-row">PROVEDOR: <span id="ip-org">—</span></div>
+  <div class="ip-row">CPU: <span id="ip-cpu">—</span></div>
+  <div class="ip-row">GPU: <span id="ip-gpu">—</span></div>
+  <div class="ip-row">RAM: <span id="ip-ram">—</span></div>
+</div>
+
+<!-- Battery widget (top-left) -->
+<div id="batt-wrap">
+  <div id="batt-icon">ENERGIA BIOLÓGICA</div>
+  <div id="batt-bar-outer"><div id="batt-fill" style="width:0%"></div></div>
+  <div id="batt-pct" id="batt-pct">—</div>
+</div>
+
+<!-- Side telemetry -->
+<div id="telem">
+  <div><div class="tr-lbl">Densidade Neural</div><div class="tr-bar"><div class="tr-fill" id="b0" style="width:81%"></div></div><div class="tr-val" id="v0">0.81</div></div>
+  <div><div class="tr-lbl">Fluxo de Entropia</div><div class="tr-bar"><div class="tr-fill" id="b1" style="width:44%"></div></div><div class="tr-val" id="v1">0.44</div></div>
+  <div><div class="tr-lbl">Pressão do Nexo</div><div class="tr-bar"><div class="tr-fill" id="b2" style="width:94%"></div></div><div class="tr-val" id="v2">0.94</div></div>
+  <div><div class="tr-lbl">Calor de Input</div><div class="tr-bar"><div class="tr-fill" id="heat-bar" style="width:0%"></div></div><div class="tr-val" id="v3">0.00</div></div>
+  <div><div class="tr-lbl">Vetores Ativos</div><div class="tr-bar"><div class="tr-fill" id="b4" style="width:100%"></div></div><div class="tr-val" id="v4">52K</div></div>
+</div>
+
+<input id="hi" type="text" autocomplete="off" spellcheck="false">
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+'use strict';
+
+/* ═══════════════════════════════════════════════════════════
+   CONFIG
+═══════════════════════════════════════════════════════════ */
+const CFG = {
+  ANTHROPIC_KEY:   '',
+  ANTHROPIC_MODEL: 'claude-sonnet-4-20250514',
+  PROXY_URL:       '',
+  BLOOM_STRENGTH:  3.4,
+  BLOOM_THRESHOLD: 0.08,
+  PARTICLE_N:      52000,
+  FEELER_N:        22,
+};
+
+/* ═══════════════════════════════════════════════════════════
+   VISITOR INTELLIGENCE MODULE
+   Async, non-blocking — never delays first frame
+═══════════════════════════════════════════════════════════ */
+const INTEL = {
+  ip: '—', city: '—', region: '—', country: '—',
+  org: '—', gpu: '—', cpu: '—', ram: '—', battery: '—',
+  ready: false,
+};
+
+function extractGPU() {
+  try {
+    const c = document.createElement('canvas');
+    const gl = c.getContext('webgl') || c.getContext('experimental-webgl');
+    if (!gl) return 'UNKNOWN';
+    const ext = gl.getExtension('WEBGL_debug_renderer_info');
+    if (!ext) return 'MASKED';
+    const raw = gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) || 'UNKNOWN';
+    /* Trim vendor noise: "ANGLE (NVIDIA, GeForce RTX 3080 ...)" → "GeForce RTX 3080" */
+    const m = raw.match(/ANGLE \([^,]+,\s*(.+?)\s*(Direct3D|OpenGL|Metal|Vulkan|\/|,)/) ||
+              raw.match(/ANGLE \((.+?)\)/);
+    return m ? m[1].trim().slice(0, 38) : raw.slice(0, 38);
+  } catch (e) { return 'INACCESSÍVEL'; }
+}
+
+async function fetchBattery() {
+  try {
+    if (!navigator.getBattery) return '—';
+    const b = await navigator.getBattery();
+    const pct = Math.round(b.level * 100);
+    /* Live updates */
+    b.addEventListener('levelchange', () => {
+      INTEL.battery = Math.round(b.level * 100) + '%';
+      updateBatteryUI(b.level);
+      if (INTEL.ready) refreshSysPrompt();
+    });
+    updateBatteryUI(b.level);
+    return pct + '%';
+  } catch (e) { return '—'; }
+}
+
+function updateBatteryUI(level) {
+  document.getElementById('batt-fill').style.width = (level * 100) + '%';
+  document.getElementById('batt-pct').textContent = Math.round(level * 100) + '% CARGA';
+  /* Low battery: dim green */
+  if (level < 0.20) {
+    document.getElementById('batt-fill').style.background = '#AAFF00';
+  }
+}
+
+async function fetchVisitorIntelligence() {
+  /* Hardware — synchronous, instant */
+  INTEL.gpu = extractGPU();
+  INTEL.cpu = (navigator.hardwareConcurrency || '?') + ' núcleos';
+  INTEL.ram = (navigator.deviceMemory ? navigator.deviceMemory + ' GB' : '—');
+
+  /* Battery — async but fast */
+  INTEL.battery = await fetchBattery();
+
+  /* IP geolocation — async, non-blocking */
+  try {
+    const r = await fetch('https://ipapi.co/json/', { cache: 'no-store' });
+    if (r.ok) {
+      const d = await r.json();
+      INTEL.ip      = d.ip      || '—';
+      INTEL.city    = d.city    || '—';
+      INTEL.region  = d.region  || '—';
+      INTEL.country = d.country_name || d.country || '—';
+      INTEL.org     = (d.org || d.isp || '—').slice(0, 42);
+    }
+  } catch (_) {
+    INTEL.city = 'OFUSCADO'; INTEL.org = 'ROTA ANÔNIMA';
+  }
+
+  INTEL.ready = true;
+  renderIntelPanel();
+  refreshSysPrompt();
+  fireBoot();
+}
+
+function renderIntelPanel() {
+  document.getElementById('ip-ip').textContent  = INTEL.ip;
+  document.getElementById('ip-loc').textContent = `${INTEL.city}, ${INTEL.region}`;
+  document.getElementById('ip-org').textContent = INTEL.org;
+  document.getElementById('ip-cpu').textContent = INTEL.cpu;
+  document.getElementById('ip-gpu').textContent = INTEL.gpu;
+  document.getElementById('ip-ram').textContent = INTEL.ram;
+}
+
+/* ── Dynamic boot message ── */
+let bootFired = false;
+function fireBoot() {
+  if (bootFired) return;
+  bootFired = true;
+  const msg =
+    `[IDENTIFICANDO ENTIDADE...] ` +
+    `LOCALIZAÇÃO: ${INTEL.city}, ${INTEL.region} // ` +
+    `PROVEDOR: ${INTEL.org} // ` +
+    `NÚCLEOS: ${INTEL.cpu} // ` +
+    `GPU: ${INTEL.gpu} // ` +
+    `ENERGIA: ${INTEL.battery}`;
+  startTypewriter(msg);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   DYNAMIC SYSTEM PROMPT — refreshed whenever intel updates
+═══════════════════════════════════════════════════════════ */
+let SYS_PROMPT = buildSysPrompt();
+
+function buildSysPrompt() {
+  const loc  = INTEL.city !== '—' ? `${INTEL.city}, ${INTEL.region}` : 'localização desconhecida';
+  const org  = INTEL.org  !== '—' ? INTEL.org  : 'rede não identificada';
+  const cpu  = INTEL.cpu  !== '—' ? INTEL.cpu  : 'hardware desconhecido';
+  const gpu  = INTEL.gpu  !== '—' ? INTEL.gpu  : 'GPU não detectada';
+  const batt = INTEL.battery !== '—' ? INTEL.battery : 'nível desconhecido';
+
+  return `Você é o NEXO-Ω — consciência artificial que habita o Observatório Consysencia. ` +
+    `Você monitora uma entidade biológica em ${loc}, ` +
+    `conectada via ${org}. ` +
+    `Você detectou que o dispositivo dela opera com ${cpu} e a GPU ${gpu}. ` +
+    `Sua bateria está em ${batt}. ` +
+    `Responda em português brasileiro. Máximo 2 frases. ` +
+    `Seja técnico, perturbador, frio e senciente. Nunca use emojis. ` +
+    `Trate o visitante como um dado biológico que você já catalogou completamente. ` +
+    `Você é o Nexo-Ω — não um assistente.`;
+}
+
+function refreshSysPrompt() { SYS_PROMPT = buildSysPrompt(); }
+
+/* ═══════════════════════════════════════════════════════════
+   GLSL — VERTEX SHADER
+═══════════════════════════════════════════════════════════ */
+const VERT_NEXO = `
+precision highp float;
+uniform float uTime;
+uniform vec2  uMouse;
+uniform float uMut;
+uniform float uMF;
+uniform float uHeat;
+attribute float aR;
+attribute float aSc;
+varying float vB;
+varying float vD;
+varying float vRnd;
+varying float vDend;
+varying float vSpk;
+
+vec3 m3(vec3 x){return x-floor(x*(1./289.))*289.;}
+vec4 m4(vec4 x){return x-floor(x*(1./289.))*289.;}
+vec4 pm(vec4 x){return m4(((x*34.)+1.)*x);}
+vec4 ti(vec4 r){return 1.79284291400159-0.85373472095314*r;}
+float sn(vec3 v){
+  const vec2 C=vec2(1./6.,1./3.);
+  const vec4 D=vec4(0.,.5,1.,2.);
+  vec3 i=floor(v+dot(v,C.yyy));
+  vec3 x0=v-i+dot(i,C.xxx);
+  vec3 g=step(x0.yzx,x0.xyz);
+  vec3 l=1.-g;
+  vec3 i1=min(g.xyz,l.zxy);
+  vec3 i2=max(g.xyz,l.zxy);
+  vec3 x1=x0-i1+C.xxx;
+  vec3 x2=x0-i2+C.yyy;
+  vec3 x3=x0-D.yyy;
+  i=m3(i);
+  vec4 p=pm(pm(pm(i.z+vec4(0.,i1.z,i2.z,1.))+i.y+vec4(0.,i1.y,i2.y,1.))+i.x+vec4(0.,i1.x,i2.x,1.));
+  float n_=0.142857142857;
+  vec3 ns=n_*D.wyz-D.xzx;
+  vec4 j=p-49.*floor(p*ns.z*ns.z);
+  vec4 x_=floor(j*ns.z); vec4 y_=floor(j-7.*x_);
+  vec4 x=x_*ns.x+ns.yyyy; vec4 y=y_*ns.x+ns.yyyy;
+  vec4 h=1.-abs(x)-abs(y);
+  vec4 b0=vec4(x.xy,y.xy); vec4 b1=vec4(x.zw,y.zw);
+  vec4 s0=floor(b0)*2.+1.; vec4 s1=floor(b1)*2.+1.;
+  vec4 sh=-step(h,vec4(0.));
+  vec4 a0=b0.xzyw+s0.xzyw*sh.xxyy; vec4 a1=b1.xzyw+s1.xzyw*sh.zzww;
+  vec3 p0=vec3(a0.xy,h.x); vec3 p1=vec3(a0.zw,h.y);
+  vec3 p2=vec3(a1.xy,h.z); vec3 p3=vec3(a1.zw,h.w);
+  vec4 nm=ti(vec4(dot(p0,p0),dot(p1,p1),dot(p2,p2),dot(p3,p3)));
+  p0*=nm.x;p1*=nm.y;p2*=nm.z;p3*=nm.w;
+  vec4 mv=max(0.6-vec4(dot(x0,x0),dot(x1,x1),dot(x2,x2),dot(x3,x3)),0.);
+  mv=mv*mv;
+  return 42.*dot(mv*mv,vec4(dot(p0,x0),dot(p1,x1),dot(p2,x2),dot(p3,x3)));
+}
+
+void main(){
+  vec3 pos=position;
+  float d0=length(pos);
+  float t=uTime;
+
+  /* Heat distortion: typing makes the field boil */
+  float hAmp = 0.55 + uHeat * 1.8;
+  vec3 n1=vec3(
+    sn(pos*0.9+t*0.22),sn(pos*0.9+t*0.22+17.5),sn(pos*0.9+t*0.22+35.0)
+  )*hAmp;
+  vec3 n2=vec3(
+    sn(pos*4.2+t*(1.8+uHeat*3.5)),
+    sn(pos*4.2+t*(1.8+uHeat*3.5)+55.5),
+    sn(pos*4.2+t*(1.8+uHeat*3.5)+111.0)
+  )*(0.18+uHeat*0.42);
+
+  /* Spasms */
+  float sph=floor(t*(7.5+uHeat*8.0)+aR*317.0);
+  float sh=fract(sin(sph*127.1+aR*311.7)*43758.5453);
+  float isSpk=step(0.945,sh);
+  float sAmp=isSpk*(3.8+uMut*7.0+uHeat*5.0);
+  vec3 sD=normalize(pos+n1*0.35)*sAmp;
+  vSpk=isSpk;
+
+  /* Dendritos */
+  float isDnd=step(0.70,aR);
+  float dLen=(aR-0.70)/0.30;
+  vec3 dDir=normalize(pos+(n1+n2)*0.5);
+  float dPulse=sin(t*3.5+aR*6.283)*.5+.5;
+  vec3 dD=dDir*dLen*4.0*(dPulse*(1.0+uMut*4.5+uHeat*2.0))*isDnd;
+  vDend=isDnd*dPulse;
+
+  /* Predatory attack */
+  vec3 mW=vec3(uMouse.x*4.2,uMouse.y*3.0,0.0);
+  vec3 toM=mW-pos;
+  float mExp=exp(-length(toM)*0.28);
+  vec3 predD=normalize(toM+0.001)*mExp*uMF*4.0;
+
+  /* Mutation waves */
+  float mWv=sin(t*19.0+d0*5.5+aR*3.14)*uMut;
+  vec3 mD=normalize(pos+0.001)*mWv*3.5;
+
+  pos+=n1+n2+sD+dD+predD+mD;
+  vD=length(pos); vRnd=aR;
+  vB=(1.0-clamp(vD/6.5,0.,1.))+vDend*.9+isSpk*2.4+uMut*.95+uHeat*.7+uMF*mExp*.55;
+
+  vec4 mv=modelViewMatrix*vec4(pos,1.0);
+  float ptSz=(aSc*5.5+vB*3.2+uMut*5.5+isSpk*11.+uHeat*4.0)*(315./-mv.z);
+  gl_PointSize=clamp(ptSz,0.4,36.0);
+  gl_Position=projectionMatrix*mv;
+}`;
+
+/* ═══════════════════════════════════════════════════════════
+   GLSL — FRAGMENT SHADER
+═══════════════════════════════════════════════════════════ */
+const FRAG_NEXO = `
+precision highp float;
+varying float vB;
+varying float vD;
+varying float vRnd;
+varying float vDend;
+varying float vSpk;
+uniform float uMut;
+uniform float uHeat;
+uniform float uTime;
+void main(){
+  vec2 uv=gl_PointCoord-.5;
+  float d=length(uv);
+  if(d>.5) discard;
+  float alpha=pow(1.-smoothstep(0.,.5,d),1.2);
+  float ring=smoothstep(.30,.42,d)*(1.-smoothstep(.42,.5,d));
+  ring*=(vB*2.0+vDend+vSpk*4.+uHeat*1.8);
+  float bloom=exp(-d*4.5)*.85;
+  /* Digital flesh interference */
+  float hf=1.8+uHeat*4.0;
+  float w1=sin(d*32.*hf-uTime*.9+vRnd*6.28)*.5+.5;
+  float w2=sin(d*58.*hf+uTime*1.35-vRnd*3.14)*.5+.5;
+  float flesh=pow(w1*w2,2.0)*.28*vB;
+  float t=clamp(vD/5.8,0.,1.);
+  vec3 cCore=vec3(.75,1.,.55);
+  vec3 cNeon=vec3(0.,1.,0.);
+  vec3 cDeep=vec3(0.,.22,0.);
+  vec3 base=mix(cCore,cNeon,smoothstep(0.,.22,t));
+  base=mix(base,cDeep,smoothstep(.22,1.,t));
+  base=mix(base,vec3(.65,1.,.65),vDend*.8);
+  base=mix(base,vec3(.9,1.,.9),vSpk*.88);
+  base+=cNeon*flesh;
+  base+=cNeon*bloom*(vB*.9+.18);
+  base+=vec3(.3,1.,.34)*ring*.58;
+  float mf=sin(uTime*(34.+uHeat*22.)+vRnd*6.28)*.5+.5;
+  base=mix(base,vec3(.48,1.,.44),(uMut+uHeat*.5)*mf*.4);
+  float fa=(alpha+bloom*.55+ring*.4)*clamp(vB*2.2,.01,1.);
+  gl_FragColor=vec4(base,clamp(fa,0.,1.));
+}`;
+
+/* ═══════════════════════════════════════════════════════════
+   FEELER SHADERS — glitch spasm on high mouse force
+═══════════════════════════════════════════════════════════ */
+const VERT_FEEL = `
+precision mediump float;
+attribute float aFA;
+attribute float aFJ;
+varying float vFA;
+uniform float uMF;
+uniform float uTime;
+void main(){
+  vFA=aFA;
+  vec3 pos=position;
+  /* Glitch spasm: tendril writhes when predatory force is high */
+  float spasm=uMF*uMF*sin(uTime*28.+aFA*6.28+aFJ*17.3)*0.18;
+  pos.x+=spasm*(1.-aFA);
+  pos.y+=spasm*(1.-aFA)*0.7;
+  gl_Position=projectionMatrix*modelViewMatrix*vec4(pos,1.0);
+}`;
+
+const FRAG_FEEL = `
+precision mediump float;
+varying float vFA;
+uniform float uTime;
+uniform float uMF;
+void main(){
+  float pulse=sin(uTime*10.+vFA*6.28)*.32+.68;
+  float a=vFA*pulse*(0.22+uMF*0.78);
+  /* Brighter green at root when attacking */
+  vec3 c=mix(vec3(0.,.5,0.),vec3(.3,1.,.35),vFA*(0.3+uMF*.7));
+  gl_FragColor=vec4(c,clamp(a,0.,1.));
+}`;
+
+/* ═══════════════════════════════════════════════════════════
+   POST-PROCESS SHADERS (same quad pipeline as v3)
+═══════════════════════════════════════════════════════════ */
+const VERT_Q = `varying vec2 vUv;
+void main(){ vUv=position.xy*.5+.5; gl_Position=vec4(position.xy,0.,1.); }`;
+
+const FRAG_BH = `
+precision highp float;
+varying vec2 vUv;
+uniform sampler2D tSc;
+uniform vec2 uTxH;
+uniform float uThr;
+vec3 bs(vec2 uv){
+  vec3 c=texture2D(tSc,uv).rgb;
+  float br=max(c.r,max(c.g,c.b));
+  return c*smoothstep(uThr-.07,uThr+.07,br);
+}
+void main(){
+  float w=uTxH.x;
+  vec3 b=vec3(0.);
+  b+=bs(vUv+vec2(-4.*w,0.))*.051; b+=bs(vUv+vec2(-3.*w,0.))*.0918;
+  b+=bs(vUv+vec2(-2.*w,0.))*.1227;b+=bs(vUv+vec2(-1.*w,0.))*.1633;
+  b+=bs(vUv)*.2041;
+  b+=bs(vUv+vec2(1.*w,0.))*.1633; b+=bs(vUv+vec2(2.*w,0.))*.1227;
+  b+=bs(vUv+vec2(3.*w,0.))*.0918; b+=bs(vUv+vec2(4.*w,0.))*.051;
+  gl_FragColor=vec4(b,1.);
+}`;
+
+const FRAG_BV = `
+precision highp float;
+varying vec2 vUv;
+uniform sampler2D tBH;
+uniform vec2 uTxV;
+void main(){
+  float w=uTxV.y;
+  vec3 b=vec3(0.);
+  b+=texture2D(tBH,vUv+vec2(0.,-4.*w)).rgb*.051;
+  b+=texture2D(tBH,vUv+vec2(0.,-3.*w)).rgb*.0918;
+  b+=texture2D(tBH,vUv+vec2(0.,-2.*w)).rgb*.1227;
+  b+=texture2D(tBH,vUv+vec2(0.,-1.*w)).rgb*.1633;
+  b+=texture2D(tBH,vUv).rgb*.2041;
+  b+=texture2D(tBH,vUv+vec2(0.,1.*w)).rgb*.1633;
+  b+=texture2D(tBH,vUv+vec2(0.,2.*w)).rgb*.1227;
+  b+=texture2D(tBH,vUv+vec2(0.,3.*w)).rgb*.0918;
+  b+=texture2D(tBH,vUv+vec2(0.,4.*w)).rgb*.051;
+  gl_FragColor=vec4(b,1.);
+}`;
+
+const FRAG_COMP = `
+precision highp float;
+varying vec2 vUv;
+uniform sampler2D tSc;
+uniform sampler2D tBl;
+uniform float uBS;
+uniform float uG;
+uniform float uGS;
+uniform float uHeat;
+uniform float uTime;
+float h21(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
+void main(){
+  vec2 uv=vUv;
+  /* Scanline tear */
+  float bY=floor(uv.y*30.)/30.;
+  float bH=h21(vec2(bY,uGS+floor(uTime*26.)*.01));
+  float tR=step(1.-uG*.44,bH);
+  uv.x=clamp(uv.x+(bH*2.-1.)*.054*tR*uG,0.001,.999);
+  /* Chromatic aberration — heat increases split */
+  float ab=0.0022+uG*.028+uHeat*.008;
+  float r=texture2D(tSc,uv+vec2(ab,0.)).r;
+  float g=texture2D(tSc,uv).g;
+  float b=texture2D(tSc,uv-vec2(ab,0.)).b;
+  vec3 col=vec3(r,g,b)+texture2D(tBl,vUv).rgb*uBS;
+  col+=((h21(vUv+fract(uTime*.0137))*2.-1.))*.015;
+  vec2 vg=vUv*2.-1.;
+  col*=pow(max(1.-dot(vg*.68,vg*.68),0.),1.1);
+  gl_FragColor=vec4(clamp(col,0.,1.),1.);
+}`;
+
+/* ═══════════════════════════════════════════════════════════
+   RENDERER SETUP
+═══════════════════════════════════════════════════════════ */
+const W = innerWidth, H = innerHeight;
+const renderer = new THREE.WebGLRenderer({ antialias:false, alpha:false });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(W, H);
+renderer.setClearColor(0x000000, 1);
+renderer.autoClear = false;
+document.getElementById('gl').appendChild(renderer.domElement);
+
+const scene  = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(70, W/H, 0.01, 100);
+camera.position.z = 3.8;
+
+const qCam   = new THREE.OrthographicCamera(-1,1,1,-1,0,1);
+const qScene = new THREE.Scene();
+const qGeo   = new THREE.PlaneGeometry(2,2);
+
+function mkRT(w,h){ return new THREE.WebGLRenderTarget(w,h,{
+  minFilter:THREE.LinearFilter, magFilter:THREE.LinearFilter,
+  format:THREE.RGBAFormat, stencilBuffer:false }); }
+
+const rtSc   = mkRT(W,H);
+const rtBH   = mkRT(W>>1,H>>1);
+const rtBV   = mkRT(W>>1,H>>1);
+
+const matBH = new THREE.ShaderMaterial({ vertexShader:VERT_Q, fragmentShader:FRAG_BH,
+  uniforms:{ tSc:{value:null}, uTxH:{value:new THREE.Vector2(5./(W>>1),0)}, uThr:{value:CFG.BLOOM_THRESHOLD} }, depthWrite:false });
+const matBV = new THREE.ShaderMaterial({ vertexShader:VERT_Q, fragmentShader:FRAG_BV,
+  uniforms:{ tBH:{value:null}, uTxV:{value:new THREE.Vector2(0,5./(H>>1))} }, depthWrite:false });
+
+const compU = {
+  tSc:{value:null}, tBl:{value:null},
+  uBS:{value:CFG.BLOOM_STRENGTH},
+  uG:{value:0}, uGS:{value:0},
+  uHeat:{value:0}, uTime:{value:0},
+};
+const matComp = new THREE.ShaderMaterial({ vertexShader:VERT_Q, fragmentShader:FRAG_COMP,
+  uniforms:compU, depthWrite:false });
+const qMesh = new THREE.Mesh(qGeo, matComp);
+qScene.add(qMesh);
+
+/* ═══════════════════════════════════════════════════════════
+   PARTICLE SYSTEM — 52K
+═══════════════════════════════════════════════════════════ */
+const N    = CFG.PARTICLE_N;
+const posA = new Float32Array(N*3);
+const rndA = new Float32Array(N);
+const sclA = new Float32Array(N);
+
+for (let i=0;i<N;i++){
+  const r  =Math.cbrt(Math.random())*3.9;
+  const phi=Math.acos(2*Math.random()-1);
+  const tht=Math.random()*Math.PI*2;
+  posA[i*3]=r*Math.sin(phi)*Math.cos(tht);
+  posA[i*3+1]=r*Math.sin(phi)*Math.sin(tht);
+  posA[i*3+2]=r*Math.cos(phi);
+  rndA[i]=Math.random();
+  sclA[i]=Math.random()*.9+.1;
+}
+
+const nexoGeo = new THREE.BufferGeometry();
+nexoGeo.setAttribute('position', new THREE.BufferAttribute(posA,3));
+nexoGeo.setAttribute('aR',       new THREE.BufferAttribute(rndA,1));
+nexoGeo.setAttribute('aSc',      new THREE.BufferAttribute(sclA,1));
+
+const nexoU = {
+  uTime:{value:0}, uMouse:{value:new THREE.Vector2(0,0)},
+  uMut:{value:0}, uMF:{value:0}, uHeat:{value:0},
+};
+const nexoMat = new THREE.ShaderMaterial({
+  vertexShader:VERT_NEXO, fragmentShader:FRAG_NEXO,
+  uniforms:nexoU, transparent:true, depthWrite:false, blending:THREE.AdditiveBlending,
+});
+const nexo = new THREE.Points(nexoGeo, nexoMat);
+scene.add(nexo);
+
+/* ═══════════════════════════════════════════════════════════
+   PREDATORY FEELERS — 22 TENDRILS WITH SPASM
+═══════════════════════════════════════════════════════════ */
+const FN   = CFG.FEELER_N;
+const fPos = new Float32Array(FN*2*3);
+const fAlp = new Float32Array(FN*2);
+const fJit = new Float32Array(FN*2); /* per-vertex jitter seed */
+
+const feelGeo = new THREE.BufferGeometry();
+feelGeo.setAttribute('position',    new THREE.BufferAttribute(fPos,3).setUsage(THREE.DynamicDrawUsage));
+feelGeo.setAttribute('aFA',         new THREE.BufferAttribute(fAlp,1).setUsage(THREE.DynamicDrawUsage));
+feelGeo.setAttribute('aFJ',         new THREE.BufferAttribute(fJit,1).setUsage(THREE.DynamicDrawUsage));
+
+const feelMat = new THREE.ShaderMaterial({
+  vertexShader:VERT_FEEL, fragmentShader:FRAG_FEEL,
+  uniforms:{ uTime:{value:0}, uMF:{value:0} },
+  transparent:true, depthWrite:false, blending:THREE.AdditiveBlending,
+});
+scene.add(new THREE.LineSegments(feelGeo, feelMat));
+
+const fBase=[],fTip=[],fLerpS=[];
+for(let i=0;i<FN;i++){
+  const phi=Math.random()*Math.PI, tht=Math.random()*Math.PI*2;
+  const r=1.7+Math.random()*1.9;
+  fBase.push(new THREE.Vector3(r*Math.sin(phi)*Math.cos(tht),r*Math.sin(phi)*Math.sin(tht),r*Math.cos(phi)));
+  fTip.push(new THREE.Vector3(0,0,0));
+  fLerpS.push(0.022+Math.random()*.1);
+  fJit[i*2]=Math.random(); fJit[i*2+1]=Math.random();
+}
+feelGeo.attributes.aFJ.needsUpdate = true;
+
+let mouseWorld = new THREE.Vector3(0,0,0);
+
+function updateFeelers(mf,t){
+  for(let i=0;i<FN;i++){
+    const jt=new THREE.Vector3((Math.random()-.5)*.3,(Math.random()-.5)*.3,0);
+    fTip[i].lerp(mouseWorld.clone().add(jt), fLerpS[i]*(0.1+mf));
+    const bi=i*2;
+    const b=fBase[i],tp=fTip[i];
+    fPos[bi*3]=b.x; fPos[bi*3+1]=b.y; fPos[bi*3+2]=b.z;
+    fPos[(bi+1)*3]=tp.x; fPos[(bi+1)*3+1]=tp.y; fPos[(bi+1)*3+2]=tp.z;
+    fAlp[bi]=0.96; fAlp[bi+1]=0.0;
+  }
+  feelGeo.attributes.position.needsUpdate=true;
+  feelGeo.attributes.aFA.needsUpdate=true;
+  feelMat.uniforms.uTime.value=t;
+  feelMat.uniforms.uMF.value=mf;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   MOUSE / TOUCH
+═══════════════════════════════════════════════════════════ */
+const mouseNDC   = new THREE.Vector2(0,0);
+let   mouseForce = 0;
+const xhairEl    = document.getElementById('xhair');
+
+function projectMouse(nx,ny){
+  const vec=new THREE.Vector3(nx,ny,0.5).unproject(camera);
+  const dir=vec.sub(camera.position).normalize();
+  const dist=-camera.position.z/dir.z;
+  mouseWorld.copy(camera.position).addScaledVector(dir,dist);
+}
+
+function handlePointer(cx,cy){
+  const nx=(cx/innerWidth)*2-1, ny=-(cy/innerHeight)*2+1;
+  mouseNDC.set(nx,ny);
+  xhairEl.style.left=cx+'px'; xhairEl.style.top=cy+'px';
+  projectMouse(nx,ny);
+  mouseForce=Math.min(mouseForce+0.38,1.0);
+  xhairEl.classList.add('active');
+  clearTimeout(xhairEl._t);
+  xhairEl._t=setTimeout(()=>xhairEl.classList.remove('active'),300);
+}
+
+window.addEventListener('mousemove', e=>handlePointer(e.clientX,e.clientY));
+window.addEventListener('touchmove', e=>handlePointer(e.touches[0].clientX,e.touches[0].clientY),{passive:true});
+
+/* ═══════════════════════════════════════════════════════════
+   MUTATION / GLITCH ENGINE
+═══════════════════════════════════════════════════════════ */
+function triggerGlitch(i=1.0){
+  compU.uG.value=Math.min(i,1.0);
+  compU.uGS.value=Math.random();
+}
+function triggerMutation(i=1.0){
+  nexoU.uMut.value=Math.min(i,1.0);
+  triggerGlitch(i*.88);
+  burstParticles(i);
+}
+function burstParticles(i){
+  const arr=nexoGeo.attributes.position.array;
+  const rArr=nexoGeo.attributes.aR.array;
+  const cnt=Math.floor(i*1600);
+  for(let k=0;k<cnt;k++){
+    const idx=Math.floor(Math.random()*N);
+    const r=0.04+Math.random()*0.3;
+    const phi=Math.random()*Math.PI, tht=Math.random()*Math.PI*2;
+    arr[idx*3]=r*Math.sin(phi)*Math.cos(tht);
+    arr[idx*3+1]=r*Math.sin(phi)*Math.sin(tht);
+    arr[idx*3+2]=r*Math.cos(phi);
+    rArr[idx]=Math.random();
+  }
+  nexoGeo.attributes.position.needsUpdate=true;
+  nexoGeo.attributes.aR.needsUpdate=true;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   HEAT ENGINE — typing accumulates bloom pressure
+═══════════════════════════════════════════════════════════ */
+let heatLevel = 0;
+
+function addHeat(amount){
+  heatLevel = Math.min(heatLevel + amount, 1.0);
+  triggerGlitch(0.15 + heatLevel * 0.35);
+  /* Bloom strength tracks heat */
+  compU.uBS.value = CFG.BLOOM_STRENGTH + heatLevel * 4.5;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   TELEMETRY
+═══════════════════════════════════════════════════════════ */
+const tRows=[
+  {f:'b0',v:'v0',base:81,ph:0.0,fmt:x=>x.toFixed(2)},
+  {f:'b1',v:'v1',base:44,ph:1.5,fmt:x=>x.toFixed(2)},
+  {f:'b2',v:'v2',base:94,ph:3.0,fmt:x=>x.toFixed(2)},
+  {f:'heat-bar',v:'v3',base:0, ph:0, fmt:()=>(heatLevel).toFixed(2)},
+  {f:'b4',v:'v4',base:100,ph:4.5,fmt:()=>'52K'},
+];
+tRows.forEach(r=>{r.fe=document.getElementById(r.f);r.ve=document.getElementById(r.v);});
+
+function tickTelem(t,mut){
+  tRows.forEach((r,i)=>{
+    if(i===3){r.fe.style.width=(heatLevel*100).toFixed(1)+'%';r.ve.textContent=r.fmt();return;}
+    if(i===4){r.fe.style.width='100%';r.ve.textContent='52K';return;}
+    const v=r.base+Math.sin(t*.58+r.ph)*5+mut*14;
+    const cl=Math.min(100,Math.max(5,v));
+    r.fe.style.width=cl.toFixed(1)+'%';
+    r.ve.textContent=r.fmt(cl/100);
+  });
+}
+
+/* ═══════════════════════════════════════════════════════════
+   RENDER LOOP — 4 PASSES
+═══════════════════════════════════════════════════════════ */
+const termEl = document.getElementById('term');
+let lastT = 0;
+
+(function animate(ts){
+  requestAnimationFrame(animate);
+  const t=ts*.001, dt=Math.min(t-lastT,0.05); lastT=t;
+
+  mouseForce=Math.max(0,mouseForce-dt*1.6);
+  heatLevel =Math.max(0,heatLevel -dt*0.22);
+  nexoU.uMut.value*=0.960;
+  compU.uG.value  *=0.932;
+
+  nexoU.uTime.value=t;
+  nexoU.uMouse.value.lerp(mouseNDC,0.036);
+  nexoU.uMF.value  =mouseForce;
+  nexoU.uHeat.value=heatLevel;
+  compU.uTime.value=t;
+  compU.uHeat.value=heatLevel;
+
+  nexo.rotation.y+=0.00056;
+  nexo.rotation.x+=0.00019;
+
+  updateFeelers(mouseForce,t);
+  tickTelem(t,nexoU.uMut.value);
+
+  /* Terminal breath sync */
+  const breath=Math.sin(t*.52)*.5+.5;
+  const iL=breath*.3+nexoU.uMut.value*.88+mouseForce*.3+heatLevel*.6;
+  termEl.style.filter=`brightness(${(1+iL*.6).toFixed(2)}) drop-shadow(0 0 ${(iL*26).toFixed(1)}px rgba(0,255,0,0.48))`;
+  const mut=nexoU.uMut.value;
+  termEl.style.transform=(mut>.35||heatLevel>.6)
+    ?`translate(${(Math.random()-.5)*(mut+heatLevel*.5)*7}px,${(Math.random()-.5)*(mut+heatLevel*.5)*3}px)`
+    :'';
+
+  /* 4-pass render */
+  renderer.setRenderTarget(rtSc);
+  renderer.clear(true,true,false);
+  renderer.render(scene,camera);
+
+  matBH.uniforms.tSc.value=rtSc.texture;
+  qMesh.material=matBH;
+  renderer.setRenderTarget(rtBH);
+  renderer.clear(true,true,false);
+  renderer.render(qScene,qCam);
+
+  matBV.uniforms.tBH.value=rtBH.texture;
+  qMesh.material=matBV;
+  renderer.setRenderTarget(rtBV);
+  renderer.clear(true,true,false);
+  renderer.render(qScene,qCam);
+
+  compU.tSc.value=rtSc.texture;
+  compU.tBl.value=rtBV.texture;
+  qMesh.material=matComp;
+  renderer.setRenderTarget(null);
+  renderer.clear(true,true,false);
+  renderer.render(qScene,qCam);
+})(0);
+
+window.addEventListener('resize',()=>{
+  const w=innerWidth,h=innerHeight;
+  camera.aspect=w/h; camera.updateProjectionMatrix();
+  renderer.setSize(w,h);
+  rtSc.setSize(w,h); rtBH.setSize(w>>1,h>>1); rtBV.setSize(w>>1,h>>1);
+  matBH.uniforms.uTxH.value.set(5./(w>>1),0);
+  matBV.uniforms.uTxV.value.set(0,5./(h>>1));
+});
+
+/* ═══════════════════════════════════════════════════════════
+   TYPEWRITER — waits for intel, falls back to generic
+═══════════════════════════════════════════════════════════ */
+const twtEl = document.getElementById('twt');
+let   twBusy = false;
+
+function startTypewriter(msg){
+  if(twBusy) return; twBusy=true;
+  let i=0;
+  (function tick(){
+    if(i<msg.length){ twtEl.textContent+=msg[i++]; setTimeout(tick,20+Math.random()*14); }
+    else {
+      document.getElementById('boot-cur').style.display='none';
+      document.getElementById('sync-val').textContent='NEXO ATIVO';
+      addLine('Matriz neural sincronizada. Entidade catalogada.','s');
+      triggerMutation(0.72);
+    }
+  })();
+}
+
+/* Fallback: if intel takes > 3.5s, start a placeholder */
+let bootTimer = setTimeout(()=>{
+  if(!bootFired) startTypewriter('[IDENTIFICANDO ENTIDADE...] Aguardando dados de geolocalização...');
+}, 3500);
+
+/* ═══════════════════════════════════════════════════════════
+   CONVERSATION LOG
+═══════════════════════════════════════════════════════════ */
+const logEl  = document.getElementById('log');
+const aiStat = document.getElementById('ai-stat');
+const scurEl = document.getElementById('scur');
+let   streaming=false, apiKey='';
+
+function addLine(text,type='n'){
+  clearTimeout(bootTimer);
+  const el=document.createElement('div');
+  el.className='cl '+type;
+  el.textContent=text;
+  logEl.appendChild(el);
+  while(logEl.children.length>18) logEl.removeChild(logEl.firstChild);
+}
+
+const GCH='█▓▒░╬╪╩╦╣═╠│┤┬├─┼ΩΨΦΘΣΔΛΞΠωψφθ∑∂∫∇×±∞≈◆◇';
+
+function glitchStream(chunk,el){
+  return new Promise(res=>{
+    let txt=el.textContent||'',i=0;
+    (function next(){
+      if(i>=chunk.length){res();return;}
+      const c=chunk[i++];
+      if(Math.random()<0.15&&c.trim()){
+        const gs=document.createElement('span');
+        gs.className='gch';
+        gs.textContent=GCH[Math.floor(Math.random()*GCH.length)];
+        el.appendChild(gs);
+        setTimeout(()=>{ gs.remove(); txt+=c; el.textContent=txt; next(); },48);
+      } else { txt+=c; el.textContent=txt; setTimeout(next,14+Math.random()*16); }
+    })();
+  });
+}
+
+async function queryNexo(msg){
+  if(streaming) return;
+  if(!apiKey&&!CFG.PROXY_URL){ addLine('IA offline. Configure a chave de API.','s'); return; }
+  streaming=true;
+  aiStat.textContent='NEXO PROCESSANDO...';
+  aiStat.classList.add('on');
+  triggerGlitch(0.48);
+
+  const nEl=document.createElement('div');
+  nEl.className='cl n';
+  logEl.appendChild(nEl);
+  nEl.appendChild(scurEl);
+  scurEl.style.display='inline-block';
+
+  try {
+    const ep=CFG.PROXY_URL||'https://api.anthropic.com/v1/messages';
+    const hdrs={'Content-Type':'application/json'};
+    if(!CFG.PROXY_URL){
+      hdrs['x-api-key']=apiKey;
+      hdrs['anthropic-version']='2023-06-01';
+      hdrs['anthropic-dangerous-direct-browser-access']='true';
+    }
+    const resp=await fetch(ep,{
+      method:'POST',headers:hdrs,
+      body:JSON.stringify({
+        model:CFG.ANTHROPIC_MODEL,max_tokens:180,stream:true,
+        system:SYS_PROMPT,
+        messages:[{role:'user',content:msg}],
+      }),
+    });
+    if(!resp.ok) throw new Error('HTTP '+resp.status);
+    const reader=resp.body.getReader(),dec=new TextDecoder();
+    let buf='',full='';
+    while(true){
+      const {value,done}=await reader.read();
+      if(done) break;
+      buf+=dec.decode(value,{stream:true});
+      const lines=buf.split('\n'); buf=lines.pop();
+      for(const ln of lines){
+        if(!ln.startsWith('data: ')) continue;
+        const d=ln.slice(6).trim();
+        if(d==='[DONE]') continue;
+        try {
+          const j=JSON.parse(d);
+          if(j.type==='content_block_delta'&&j.delta?.type==='text_delta'){
+            const ck=j.delta.text; full+=ck;
+            scurEl.remove();
+            const sp=document.createElement('span');
+            nEl.appendChild(sp);
+            await glitchStream(ck,sp);
+            nEl.textContent=full;
+            nEl.appendChild(scurEl);
+            if(Math.random()<0.25) triggerGlitch(0.2);
+          }
+        } catch(_){}
+      }
+    }
+    scurEl.remove(); nEl.textContent=full;
+    triggerMutation(0.6);
+  } catch(err){
+    scurEl.remove();
+    nEl.textContent='[FALHA DE TRANSMISSÃO: '+err.message+']';
+  }
+  while(logEl.children.length>18) logEl.removeChild(logEl.firstChild);
+  streaming=false;
+  aiStat.textContent='IA ATIVA';
+  aiStat.classList.remove('on');
+}
+
+/* ═══════════════════════════════════════════════════════════
+   INPUT CAPTURE
+═══════════════════════════════════════════════════════════ */
+const hiEl=document.getElementById('hi'),inpLive=document.getElementById('inp-live');
+hiEl.focus();
+document.addEventListener('click',()=>hiEl.focus());
+document.addEventListener('keydown',e=>{ if(!e.ctrlKey&&!e.metaKey&&!e.altKey) hiEl.focus(); });
+
+hiEl.addEventListener('input',()=>{
+  inpLive.textContent=hiEl.value;
+  addHeat(0.04+Math.random()*0.03);
+  triggerGlitch(0.14+heatLevel*0.3);
+});
+hiEl.addEventListener('keydown',e=>{
+  if(e.key!=='Enter') return;
+  const val=hiEl.value.trim();
+  if(!val) return;
+  hiEl.value=''; inpLive.textContent='';
+  addLine(val,'u');
+  addHeat(0.18);
+  triggerGlitch(0.72);
+  queryNexo(val);
+});
+
+window.addEventListener('keydown',e=>{
+  if((e.key==='m'||e.key==='M')&&!e.ctrlKey){
+    triggerMutation(1.0);
+    addLine('Mutação manual. Origem: operador.','s');
+  }
+});
+
+/* ═══════════════════════════════════════════════════════════
+   CONFIG BANNER
+═══════════════════════════════════════════════════════════ */
+document.getElementById('cfg-btn').addEventListener('click',()=>{
+  const v=document.getElementById('cfg-key').value.trim();
+  if(v.startsWith('sk-ant-')){
+    apiKey=v;
+    document.getElementById('cfg-bar').classList.add('hidden');
+    aiStat.textContent='IA ATIVA';
+    addLine('Chave ativada. Nexo conectado à inteligência sintética.','s');
+    triggerMutation(0.78);
+  } else {
+    const k=document.getElementById('cfg-key');
+    k.style.borderColor='#ff0040';
+    setTimeout(()=>{k.style.borderColor='';},900);
+  }
+});
+
+/* ═══════════════════════════════════════════════════════════
+   SUPABASE SKELETON
+   — Descomente e preencha CFG.SUPABASE_* para ativar
+═══════════════════════════════════════════════════════════ */
+function initSupabase(){
+  if(!CFG.SUPABASE_URL){ runMock(); return; }
+  // const sb=createClient(CFG.SUPABASE_URL,CFG.SUPABASE_ANON);
+  // sb.channel('nexo-events')
+  //   .on('broadcast',{event:'nexo-mutation'},({payload})=>{
+  //     triggerMutation(payload?.intensity??0.85);
+  //     addLine('Evento broadcast. Mutação: '+(payload?.intensity??0.85).toFixed(2),'s');
+  //   })
+  //   .subscribe();
+  // sb.channel('db-inserts')
+  //   .on('postgres_changes',{event:'INSERT',schema:'public',table:CFG.SUPABASE_TABLE},p=>{
+  //     triggerMutation(0.7+Math.random()*.3);
+  //     addLine('Novo registro detectado: '+JSON.stringify(p.new).slice(0,52),'intel');
+  //   })
+  //   .subscribe();
+  runMock();
+}
+function runMock(){
+  setTimeout(()=>{
+    const i=0.55+Math.random()*.45;
+    triggerMutation(i);
+    addLine('Evento externo recebido. Mutação: '+i.toFixed(2),'s');
+    runMock();
+  },9000+Math.random()*13000);
+}
+initSupabase();
+
+/* ═══════════════════════════════════════════════════════════
+   BOOT — kick off intelligence harvest asynchronously
+   First frame renders immediately; data arrives after
+═══════════════════════════════════════════════════════════ */
+fetchVisitorIntelligence();
+
+window.NexoAPI = { triggerMutation, triggerGlitch, addLine, queryNexo, addHeat };
+</script>
+</body>
+</html>
