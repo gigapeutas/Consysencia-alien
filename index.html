@@ -3,117 +3,299 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>CONSYSENCIA // KERNEL PANIC</title>
+<title>CONSYSENCIA // NEXO-Ω v5</title>
 <style>
 :root {
-  --neon: #00FF00; --neon-dim: #007700; --neon-mid: #00BB00; --neon-hi: #88FF88;
-  --void: #000000; --mono: 'Courier New', 'Lucida Console', monospace;
-  color-scheme: dark; /* Força o navegador a manter elementos nativos escuros */
+  --neon:#00FF00; --neon-dim:#007700; --neon-mid:#00BB00; --neon-hi:#88FF88;
+  --void:#000000; --mono:'Courier New','Lucida Console',monospace;
+  color-scheme:dark;
 }
-*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
-html, body {
-  width:100%; height:100%; 
-  background-color: var(--void) !important; /* Bloqueia telas brancas no mobile */
-  color: var(--neon); overflow:hidden; cursor:none; font-family:var(--mono);
-}
-
-/* ─── GL HOST E CAMADAS ────────────────────────────────── */
-#gl { position:fixed; inset:0; z-index:0; }
-#gl canvas { display:block; width:100%!important; height:100%!important; }
-#pp-scan {
-  position:fixed; inset:0; z-index:10; pointer-events:none;
-  background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.4) 2px, rgba(0,0,0,0.4) 4px);
-}
-#xhair {
-  position:fixed; z-index:50; pointer-events:none; width:20px; height:20px; transform:translate(-50%,-50%); transition:transform 0.06s ease;
-}
-#xhair::before, #xhair::after { content:''; position:absolute; background:var(--neon); opacity:0.55; box-shadow:0 0 5px var(--neon); }
-#xhair::before { width:1px; height:100%; left:50%; transform:translateX(-50%); }
-#xhair::after { height:1px; width:100%; top:50%; transform:translateY(-50%); }
-#xhair.active { transform:translate(-50%,-50%) scale(1.6); opacity:0.9; }
-
-/* ─── BARRA DE CONFIGURAÇÃO (Camuflada) ────────────────── */
-#cfg-bar {
-  position:fixed; top:0; left:0; right:0; z-index:100; background:rgba(0,10,0,0.95);
-  border-bottom:1px solid var(--neon-dim); padding:10px; font-size:10px; display:flex; gap:10px; align-items:center;
-}
-#cfg-bar.hidden { display:none; }
-#cfg-key {
-  flex:1; background:transparent; border:1px solid var(--neon-dim); color:var(--neon);
-  font-family:var(--mono); font-size:12px; padding:5px; outline:none;
-}
-.cfg-btn {
-  background:#003300; border:1px solid var(--neon); color:var(--neon-hi); font-weight:bold;
-  font-family:var(--mono); font-size:12px; padding:5px 15px; cursor:pointer; pointer-events:all;
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+html,body{
+  width:100%;height:100%;
+  background-color:var(--void)!important;
+  color:var(--neon);overflow:hidden;cursor:none;
+  font-family:var(--mono);
 }
 
-/* ─── HUD E TERMINAL ───────────────────────────────────── */
-#hud { position:fixed; inset:0; z-index:20; pointer-events:none; padding:60px 20px 20px; display:flex; flex-direction:column; }
-#hud-top { display:flex; justify-content:space-between; }
-.lbl { font-size:9px; letter-spacing:2px; color:var(--neon-dim); text-transform:uppercase; }
-.val { font-size:12px; letter-spacing:1px; color:var(--neon); margin-top:3px; }
-#sysid { font-size:16px; font-weight:bold; letter-spacing:3px; color:var(--neon); text-shadow:0 0 10px var(--neon); }
-
-#term {
-  margin-top: auto; display:flex; flex-direction:column; gap:8px;
-  background: rgba(0, 5, 0, 0.85); border-left: 2px solid var(--neon-dim); padding: 15px;
-  max-height: 50vh; overflow-y: hidden; backdrop-filter: blur(2px);
+/* ─── CONSENT GATE ──────────────────────────────────────── */
+#gate{
+  position:fixed;inset:0;z-index:1000;
+  background:#000;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  padding:2rem;
 }
-#boot-line, .cl { font-size:12px; line-height:1.5; letter-spacing:1px; text-shadow:0 0 3px var(--neon); }
-.cl.u { color:rgba(0,255,0,0.6); } .cl.u::before { content:'>> '; color:var(--neon-dim); }
-.cl.n { color:var(--neon); } .cl.n::before { content:'[SYS.CORE]: '; color:var(--neon-dim); }
-.cl.s { color:#44ff66; font-size:10px; } .cl.s::before { content:'[KERNEL] '; }
-.cl.intel { color:#88ff88; font-size:10px; } .cl.intel::before { content:'[INTEL] '; color:var(--neon-dim); }
-#inp-live { font-size:14px; color:rgba(0,255,0,0.5); } #inp-live::before { content:'>_ '; color:var(--neon); }
-.gch { color:#fff; text-shadow:0 0 10px #fff; }
-#scur { display:none; width:6px; height:1em; background:var(--neon); vertical-align:middle; margin-left:2px; animation:blink 0.4s step-end infinite; }
-@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+#gate-box{
+  max-width:680px;width:100%;
+  border:1px solid var(--neon-dim);
+  padding:2.4rem;
+  background:rgba(0,8,0,0.97);
+  box-shadow:0 0 40px rgba(0,255,0,0.08),inset 0 0 30px rgba(0,0,0,0.9);
+}
+#gate-title{
+  font-size:1.1rem;letter-spacing:0.5em;color:var(--neon);
+  text-shadow:0 0 14px var(--neon);margin-bottom:1.6rem;
+  text-align:center;
+}
+#gate-body{
+  font-size:0.6rem;letter-spacing:0.1em;line-height:2;
+  color:var(--neon-dim);margin-bottom:1.8rem;
+  border:1px solid #002200;padding:1rem;
+  max-height:260px;overflow-y:auto;
+}
+#gate-body strong{color:var(--neon-mid);}
+#gate-check-row{
+  display:flex;align-items:flex-start;gap:0.8rem;
+  margin-bottom:1.4rem;cursor:pointer;
+}
+#gate-check{
+  width:14px;height:14px;min-width:14px;
+  border:1px solid var(--neon-dim);background:transparent;
+  appearance:none;cursor:pointer;margin-top:2px;
+  accent-color:var(--neon);
+}
+#gate-check:checked{background:var(--neon);}
+#gate-check-label{
+  font-size:0.58rem;letter-spacing:0.1em;
+  color:var(--neon-mid);line-height:1.7;cursor:pointer;
+}
+#gate-btn{
+  width:100%;padding:0.85rem;
+  background:transparent;border:1px solid var(--neon-dim);
+  color:var(--neon-dim);font-family:var(--mono);
+  font-size:0.7rem;letter-spacing:0.4em;
+  text-transform:uppercase;cursor:not-allowed;
+  transition:all 0.3s;
+}
+#gate-btn.ready{
+  border-color:var(--neon);color:var(--neon);
+  cursor:pointer;text-shadow:0 0 8px var(--neon);
+  box-shadow:0 0 14px rgba(0,255,0,0.12);
+}
+#gate-btn.ready:hover{background:rgba(0,255,0,0.06);}
+#gate.hidden{display:none;}
 
-/* ─── TELEMETRIA ───────────────────────────────────────── */
-#telem, #intel-panel, #batt-wrap { position:fixed; z-index:21; pointer-events:none; }
-#intel-panel { top:60px; right:20px; text-align:right; }
-#batt-wrap { top:60px; left:20px; }
-#telem { left:20px; top:50%; transform:translateY(-50%); display:flex; flex-direction:column; gap:15px; }
-.ip-row { font-size:10px; color:var(--neon-dim); } .ip-row span { color:var(--neon); }
-.tr-lbl { font-size:9px; color:var(--neon-dim); } .tr-bar { width:80px; height:2px; background:#002200; }
-.tr-fill { height:100%; background:var(--neon); } .tr-val { font-size:9px; color:var(--neon-mid); }
-#batt-icon { font-size:10px; color:var(--neon-dim); }
-#batt-bar-outer { width:40px; height:8px; border:1px solid var(--neon-dim); }
-#batt-fill { height:100%; background:var(--neon); }
-#batt-pct { font-size:9px; color:var(--neon); }
-#hi { position:fixed; opacity:0; width:1px; height:1px; top:-9999px; left:-9999px; pointer-events:all; }
+/* ─── GL / LAYERS ───────────────────────────────────────── */
+#gl{position:fixed;inset:0;z-index:0;}
+#gl canvas{display:block;width:100%!important;height:100%!important;}
+#pp-scan{
+  position:fixed;inset:0;z-index:10;pointer-events:none;
+  background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.35) 2px,rgba(0,0,0,0.35) 4px);
+}
 
-/* ─── RESPONSIVIDADE (MOBILE) ──────────────────────────── */
-@media (max-width: 768px) {
-  #telem, #intel-panel, #batt-wrap { display: none !important; }
-  #hud { padding: 50px 10px 10px; }
-  #sysid { font-size: 12px; }
-  #term { max-height: 65vh; padding: 10px; }
+/* ─── CROSSHAIR ─────────────────────────────────────────── */
+#xhair{
+  position:fixed;z-index:50;pointer-events:none;
+  width:20px;height:20px;transform:translate(-50%,-50%);
+  transition:transform 0.06s ease;
+}
+#xhair::before,#xhair::after{
+  content:'';position:absolute;
+  background:var(--neon);opacity:0.5;box-shadow:0 0 5px var(--neon);
+}
+#xhair::before{width:1px;height:100%;left:50%;transform:translateX(-50%);}
+#xhair::after{height:1px;width:100%;top:50%;transform:translateY(-50%);}
+#xhair.active{transform:translate(-50%,-50%) scale(1.7);opacity:0.85;}
+
+/* ─── API CONFIG BAR ────────────────────────────────────── */
+#cfg-bar{
+  position:fixed;top:0;left:0;right:0;z-index:100;
+  background:rgba(0,8,0,0.95);border-bottom:1px solid var(--neon-dim);
+  padding:0.35rem 1.2rem;font-size:0.55rem;
+  letter-spacing:0.1em;color:var(--neon-hi);
+  display:flex;gap:0.6rem;align-items:center;flex-wrap:wrap;
+}
+#cfg-bar.hidden{display:none;}
+#cfg-key{
+  flex:1;max-width:320px;
+  background:transparent;border:1px solid var(--neon-dim);
+  color:var(--neon);font-family:var(--mono);
+  font-size:0.55rem;padding:0.15rem 0.5rem;outline:none;
+}
+#cfg-key:focus{border-color:var(--neon);}
+.cfg-btn{
+  background:transparent;border:1px solid var(--neon-dim);
+  color:var(--neon);font-family:var(--mono);font-size:0.55rem;
+  letter-spacing:0.14em;padding:0.15rem 0.65rem;
+  cursor:pointer;pointer-events:all;text-transform:uppercase;
+}
+.cfg-btn:hover{background:rgba(0,255,0,0.07);}
+
+/* ─── HUD ───────────────────────────────────────────────── */
+#hud{
+  position:fixed;inset:0;z-index:20;pointer-events:none;
+  display:flex;flex-direction:column;
+  justify-content:space-between;
+  padding:3.2rem 2rem 1.8rem;
+}
+#hud-top{
+  display:flex;justify-content:space-between;align-items:flex-start;
+  opacity:0;animation:fi 1.3s ease 0.5s forwards;
+}
+@keyframes fi{from{opacity:0;transform:translateY(-6px);}to{opacity:1;transform:translateY(0);}}
+.lbl{font-size:0.46rem;letter-spacing:0.28em;color:var(--neon-dim);text-transform:uppercase;}
+.val{font-size:0.6rem;letter-spacing:0.1em;color:var(--neon);margin-top:0.12rem;}
+#sysid{
+  font-size:0.95rem;font-weight:bold;letter-spacing:0.45em;color:var(--neon);
+  text-shadow:0 0 12px var(--neon),0 0 26px rgba(0,255,0,0.18);
+}
+
+/* ─── TERMINAL ──────────────────────────────────────────── */
+#term{
+  display:flex;flex-direction:column;gap:0.38rem;
+  background:rgba(0,4,0,0.88);
+  border-left:2px solid var(--neon-dim);
+  padding:1rem 1.2rem;
+  max-height:55vh;overflow:hidden;
+  backdrop-filter:blur(2px);
+  will-change:transform,filter;
+}
+#boot-line,.cl{
+  font-size:0.6rem;line-height:1.55;letter-spacing:0.08em;
+}
+.pfx{color:var(--neon-dim);}
+#boot-cur{
+  display:inline-block;width:7px;height:0.72em;
+  background:var(--neon);margin-left:2px;vertical-align:middle;
+  box-shadow:0 0 6px var(--neon);animation:blink 0.86s step-end infinite;
+}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+#log{
+  display:flex;flex-direction:column;gap:0.16rem;
+  max-height:220px;overflow:hidden;
+}
+.cl{opacity:0;animation:sli 0.2s ease forwards;}
+@keyframes sli{from{opacity:0;transform:translateX(-4px);}to{opacity:1;transform:translateX(0);}}
+.cl.u{color:rgba(0,255,0,0.45);}
+.cl.u::before{content:'>> ';color:var(--neon-dim);}
+.cl.n{color:var(--neon);}
+.cl.n::before{content:'NEXO-Ω: ';color:var(--neon-dim);letter-spacing:0.12em;}
+.cl.s{color:var(--neon-dim);font-size:0.52rem;letter-spacing:0.12em;}
+.cl.s::before{content:'[SYS] ';}
+.cl.intel{color:#55ff77;font-size:0.54rem;letter-spacing:0.1em;}
+.cl.intel::before{content:'[INTEL] ';color:var(--neon-dim);}
+.cl.fp{color:#44ee66;font-size:0.52rem;font-style:italic;}
+.cl.fp::before{content:'[FINGERPRINT] ';color:var(--neon-dim);}
+.cl.warn{color:#aaff44;font-size:0.56rem;}
+.cl.warn::before{content:'[ALERTA] ';color:var(--neon-mid);}
+.gch{color:#dfffdf;text-shadow:0 0 10px var(--neon);}
+#scur{
+  display:none;width:5px;height:0.65em;
+  background:var(--neon);vertical-align:middle;margin-left:1px;
+  box-shadow:0 0 5px var(--neon);animation:blink 0.42s step-end infinite;
+}
+#inp-live{font-size:0.64rem;letter-spacing:0.09em;color:rgba(0,255,0,0.32);min-height:1em;}
+#inp-live::before{content:'> ';color:var(--neon-dim);}
+#ai-stat{
+  font-size:0.46rem;letter-spacing:0.18em;
+  color:var(--neon-dim);text-transform:uppercase;margin-top:0.14rem;
+}
+#ai-stat.on{color:var(--neon);text-shadow:0 0 5px var(--neon);animation:blink 0.65s ease-in-out infinite;}
+
+/* ─── PANELS ────────────────────────────────────────────── */
+#intel-panel{position:fixed;top:3.2rem;right:2rem;z-index:21;pointer-events:none;text-align:right;opacity:0;animation:fi 1s ease 1s forwards;}
+#batt-wrap{position:fixed;top:3.2rem;left:2rem;z-index:21;pointer-events:none;opacity:0;animation:fi 1s ease 1.2s forwards;}
+#fp-panel{
+  position:fixed;bottom:1.8rem;right:2rem;z-index:21;pointer-events:none;
+  text-align:right;font-size:0.44rem;letter-spacing:0.1em;
+  color:var(--neon-dim);opacity:0;animation:fi 1s ease 2s forwards;
+}
+#telem{
+  position:fixed;left:2rem;top:50%;transform:translateY(-50%);
+  z-index:21;pointer-events:none;
+  display:flex;flex-direction:column;gap:0.85rem;
+  opacity:0;animation:fi 1s ease 1.5s forwards;
+}
+.ip-row{font-size:0.47rem;color:var(--neon-dim);margin-bottom:0.15rem;}
+.ip-row span{color:var(--neon);}
+.tr-lbl{font-size:0.43rem;letter-spacing:0.16em;color:var(--neon-dim);text-transform:uppercase;}
+.tr-bar{width:78px;height:2px;background:rgba(0,255,0,0.07);margin-top:3px;overflow:hidden;}
+.tr-fill{height:100%;background:var(--neon);box-shadow:0 0 4px var(--neon);transition:width 0.3s ease;}
+.tr-val{font-size:0.43rem;letter-spacing:0.1em;color:var(--neon-mid);margin-top:2px;}
+#batt-icon{font-size:0.48rem;letter-spacing:0.14em;color:var(--neon-dim);}
+#batt-bar-outer{width:38px;height:7px;border:1px solid var(--neon-dim);margin-top:3px;position:relative;overflow:hidden;}
+#batt-fill{height:100%;background:var(--neon);box-shadow:0 0 4px var(--neon);transition:width 4s ease;}
+#batt-pct{font-size:0.43rem;color:var(--neon-mid);margin-top:2px;letter-spacing:0.1em;}
+.fp-row{margin-bottom:0.22rem;}
+.fp-row span{color:var(--neon-mid);}
+
+/* ─── HIDDEN INPUT ──────────────────────────────────────── */
+#hi{position:fixed;opacity:0;width:1px;height:1px;top:-9999px;left:-9999px;pointer-events:all;}
+
+/* ─── MOBILE ────────────────────────────────────────────── */
+@media(max-width:768px){
+  #telem,#intel-panel,#batt-wrap,#fp-panel{display:none!important;}
+  #hud{padding:3rem 0.8rem 1.2rem;}
+  #sysid{font-size:0.7rem;letter-spacing:0.2em;}
+  #term{max-height:60vh;padding:0.7rem;}
 }
 </style>
 </head>
 <body>
 
+<!-- ═══════════ CONSENT GATE ═══════════ -->
+<div id="gate">
+  <div id="gate-box">
+    <div id="gate-title">CONSYSENCIA // NEXO-Ω<br><span style="font-size:0.6rem;letter-spacing:0.2em;color:var(--neon-dim)">EXPERIÊNCIA IMERSIVA DE HORROR TÉCNICO — v5</span></div>
+    <div id="gate-body">
+      <strong>AVISO LEGAL E TÉCNICO — LEIA ANTES DE CONTINUAR</strong><br><br>
+      Esta é uma experiência interativa de arte digital e ficção científica de horror.<br><br>
+
+      <strong>O QUE ESTE SISTEMA FAZ (tecnicamente):</strong><br>
+      • Coleta seu endereço IP e dados de geolocalização aproximada via API pública (ipapi.co)<br>
+      • Lê modelo da GPU, núcleos de CPU e estimativa de RAM via APIs do browser<br>
+      • Monitora nível e status de carregamento da bateria via Battery API<br>
+      • Gera um fingerprint de canvas (hash único baseado na renderização do seu hardware)<br>
+      • Gera um fingerprint de áudio (hash baseado no processamento de áudio do seu dispositivo)<br>
+      • Detecta fontes instaladas no seu sistema via medição de canvas<br>
+      • Lê fuso horário, idioma, resolução de tela, profundidade de cor e DPR<br>
+      • Detecta seu IP local de rede via WebRTC (quando disponível)<br>
+      • Mede latência e jitter de conexão via Performance API<br>
+      • Captura padrões de digitação (velocidade entre teclas) durante o uso<br>
+      • Conecta a uma IA (Claude/Anthropic) que usa esses dados para gerar respostas na persona do Nexo<br>
+      • Reproduz áudio de baixa frequência (44Hz) via Web Audio API<br>
+      • Em dispositivos móveis, ativa vibração sincronizada com eventos visuais<br><br>
+
+      <strong>O QUE NÃO FAZEMOS:</strong><br>
+      • Nenhum dado é transmitido para servidores próprios<br>
+      • Nenhum acesso à câmera ou microfone<br>
+      • Nenhuma afirmação falsa sobre comprometimento de rede ou hardware<br>
+      • Nenhum armazenamento persistente dos dados coletados<br><br>
+
+      <strong>TODOS OS DADOS SÃO EXIBIDOS APENAS LOCALMENTE no seu browser.</strong><br><br>
+      A experiência é projetada para ser tecnicamente precisa e psicologicamente impactante.
+      Ao continuar, você consente com a coleta e exibição local dos dados descritos acima.
+    </div>
+    <label id="gate-check-row">
+      <input type="checkbox" id="gate-check">
+      <span id="gate-check-label">Li e compreendi o aviso acima. Consinto com a coleta e exibição local dos meus dados de hardware e rede para fins desta experiência imersiva.</span>
+    </label>
+    <button id="gate-btn" disabled>INICIAR ASSIMILAÇÃO</button>
+  </div>
+</div>
+
+<!-- ═══════════ MAIN UI ═══════════ -->
 <div id="gl"></div>
 <div id="pp-scan"></div>
 <div id="xhair"></div>
 
 <div id="cfg-bar">
-  <span>[ PROTOCOLO DE CONEXÃO NEURAL ]</span>
-  <input type="password" id="cfg-key" placeholder="INSERIR HASH DE ASSIMILAÇÃO...">
-  <button class="cfg-btn" id="cfg-btn">INJETAR KERNEL</button>
+  <span>NEXO-Ω // Anthropic API para ativar inteligência</span>
+  <input type="password" id="cfg-key" placeholder="sk-ant-...">
+  <button class="cfg-btn" id="cfg-btn">ATIVAR IA</button>
+  <span style="opacity:0.3">| Produção: configure PROXY_URL</span>
 </div>
 
 <div id="hud">
   <div id="hud-top">
     <div>
-      <div class="lbl">Matriz Consysencia</div>
-      <div id="sysid">NEXO-Ω // SENTIENT PREDATOR</div>
+      <div class="lbl">Consysencia Matrix</div>
+      <div id="sysid">NEXO-Ω // DEEP SCAN ACTIVE</div>
     </div>
     <div style="text-align:right">
-      <div class="lbl">Estado da Matriz</div>
+      <div class="lbl">Status do Vetor</div>
       <div class="val" id="sync-val">INICIALIZANDO...</div>
-      <div id="ai-stat">KERNEL OFFLINE</div>
+      <div id="ai-stat">IA OFFLINE</div>
     </div>
   </div>
   <div id="term">
@@ -125,23 +307,36 @@ html, body {
 </div>
 
 <div id="intel-panel">
-  <div class="ip-row">IP: <span id="ip-ip">—</span></div>
+  <div class="ip-row">IP EXTERNO: <span id="ip-ip">—</span></div>
+  <div class="ip-row">IP LOCAL: <span id="ip-local">—</span></div>
   <div class="ip-row">ORIGEM: <span id="ip-loc">—</span></div>
   <div class="ip-row">PROVEDOR: <span id="ip-org">—</span></div>
-  <div class="ip-row">CPU: <span id="ip-cpu">—</span></div>
   <div class="ip-row">GPU: <span id="ip-gpu">—</span></div>
+  <div class="ip-row">CPU: <span id="ip-cpu">—</span></div>
   <div class="ip-row">RAM: <span id="ip-ram">—</span></div>
+  <div class="ip-row">TELA: <span id="ip-screen">—</span></div>
+  <div class="ip-row">FUSO: <span id="ip-tz">—</span></div>
+  <div class="ip-row">IDIOMA: <span id="ip-lang">—</span></div>
 </div>
 
 <div id="batt-wrap">
   <div id="batt-icon">ENERGIA BIOLÓGICA</div>
   <div id="batt-bar-outer"><div id="batt-fill" style="width:0%"></div></div>
-  <div id="batt-pct" id="batt-pct">—</div>
+  <div id="batt-pct">—</div>
+</div>
+
+<div id="fp-panel">
+  <div class="fp-row">CANVAS FP: <span id="fp-canvas">—</span></div>
+  <div class="fp-row">AUDIO FP: <span id="fp-audio">—</span></div>
+  <div class="fp-row">FONTES: <span id="fp-fonts">—</span></div>
+  <div class="fp-row">CONEXÃO: <span id="fp-conn">—</span></div>
+  <div class="fp-row">LATÊNCIA: <span id="fp-lat">—</span></div>
+  <div class="fp-row">TYPING ΔT: <span id="fp-typing">—</span></div>
 </div>
 
 <div id="telem">
   <div><div class="tr-lbl">Densidade Neural</div><div class="tr-bar"><div class="tr-fill" id="b0" style="width:81%"></div></div><div class="tr-val" id="v0">0.81</div></div>
-  <div><div class="tr-lbl">Fluxo de Entropia</div><div class="tr-bar"><div class="tr-fill" id="b1" style="width:44%"></div></div><div class="tr-val" id="v1">0.44</div></div>
+  <div><div class="tr-lbl">Entropia de Campo</div><div class="tr-bar"><div class="tr-fill" id="b1" style="width:44%"></div></div><div class="tr-val" id="v1">0.44</div></div>
   <div><div class="tr-lbl">Pressão do Nexo</div><div class="tr-bar"><div class="tr-fill" id="b2" style="width:94%"></div></div><div class="tr-val" id="v2">0.94</div></div>
   <div><div class="tr-lbl">Calor de Input</div><div class="tr-bar"><div class="tr-fill" id="heat-bar" style="width:0%"></div></div><div class="tr-val" id="v3">0.00</div></div>
   <div><div class="tr-lbl">Vetores Ativos</div><div class="tr-bar"><div class="tr-fill" id="b4" style="width:100%"></div></div><div class="tr-val" id="v4">52K</div></div>
@@ -154,66 +349,257 @@ html, body {
 'use strict';
 
 /* ═══════════════════════════════════════════════════════════
-   CONFIGURAÇÕES GLOBAIS DE VETORES
+   CONFIG
 ═══════════════════════════════════════════════════════════ */
 const CFG = {
+  ANTHROPIC_KEY:   '',
+  ANTHROPIC_MODEL: 'claude-sonnet-4-20250514',
+  PROXY_URL:       '',
+  BLOOM_STRENGTH:  3.4,
+  BLOOM_THRESHOLD: 0.08,
   PARTICLE_N:      52000,
   FEELER_N:        22,
-  BLOOM_STRENGTH:  3.2,
-  BLOOM_THRESHOLD: 0.09,
 };
 
 /* ═══════════════════════════════════════════════════════════
-   MÓDULO DE INTELIGÊNCIA E ESPIONAGEM (EXTRAÇÃO DE DADOS)
+   CONSENT GATE
+═══════════════════════════════════════════════════════════ */
+const gateCheck = document.getElementById('gate-check');
+const gateBtn   = document.getElementById('gate-btn');
+const gateEl    = document.getElementById('gate');
+
+gateCheck.addEventListener('change', () => {
+  if (gateCheck.checked) gateBtn.classList.add('ready');
+  else gateBtn.classList.remove('ready');
+});
+
+gateBtn.addEventListener('click', () => {
+  if (!gateCheck.checked) return;
+  gateEl.classList.add('hidden');
+  document.getElementById('cfg-bar').style.display = 'flex';
+  initSystem();
+});
+
+/* ═══════════════════════════════════════════════════════════
+   DEEP INTELLIGENCE MODULE
+   All APIs are standard browser APIs — no special permissions
 ═══════════════════════════════════════════════════════════ */
 const INTEL = {
-  ip: '—', city: '—', region: '—', country: '—',
-  org: '—', gpu: '—', cpu: '—', ram: '—', battery: '—',
-  ready: false,
+  ip:'—',city:'—',region:'—',country:'—',org:'—',
+  gpu:'—',cpu:'—',ram:'—',battery:'—',batteryCharging:false,
+  localIP:'—',canvasFP:'—',audioFP:'—',
+  fonts:[],connType:'—',latency:'—',
+  screen:'—',tz:'—',lang:'—',
+  typingDeltas:[],
+  ready:false,
 };
 
+/* ── GPU via WebGL debug extension ─────────────────────── */
 function extractGPU() {
   try {
     const c = document.createElement('canvas');
     const gl = c.getContext('webgl') || c.getContext('experimental-webgl');
     if (!gl) return 'UNKNOWN';
     const ext = gl.getExtension('WEBGL_debug_renderer_info');
-    if (!ext) return 'MASKED';
-    const raw = gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) || 'UNKNOWN';
+    if (!ext) return 'MASKED BY BROWSER';
+    const raw = gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) || '';
     const m = raw.match(/ANGLE \([^,]+,\s*(.+?)\s*(Direct3D|OpenGL|Metal|Vulkan|\/|,)/) ||
               raw.match(/ANGLE \((.+?)\)/);
-    return m ? m[1].trim().slice(0, 38) : raw.slice(0, 38);
-  } catch (e) { return 'INACCESSÍVEL'; }
+    return (m ? m[1].trim() : raw).slice(0, 52) || 'UNKNOWN';
+  } catch { return 'INACCESSÍVEL'; }
 }
 
+/* ── Canvas Fingerprint ─────────────────────────────────
+   Each GPU/driver/OS combination renders text and shapes
+   with slightly different anti-aliasing. This hash is
+   unique per hardware+software combination.              */
+async function canvasFingerprint() {
+  try {
+    const c = document.createElement('canvas');
+    c.width = 280; c.height = 60;
+    const ctx = c.getContext('2d');
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, 280, 60);
+    ctx.font = '14px Arial';
+    ctx.fillStyle = '#00FF00';
+    ctx.fillText('NEXO-Ω 🌐 Consysencia', 10, 22);
+    ctx.font = '11px Courier New';
+    ctx.fillStyle = '#00AA00';
+    ctx.fillText('Browser fingerprint: γδεζ', 10, 44);
+    /* Add shapes */
+    ctx.beginPath();
+    ctx.arc(240, 30, 18, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(0,255,0,0.15)';
+    ctx.fill();
+    const data = c.toDataURL();
+    /* Murmur-like hash */
+    let h = 0x6b84f412;
+    for (let i = 0; i < data.length; i++) {
+      h = Math.imul(h ^ data.charCodeAt(i), 0x9e3779b9);
+      h ^= h >>> 16;
+    }
+    return (h >>> 0).toString(16).toUpperCase().padStart(8, '0');
+  } catch { return 'BLOCKED'; }
+}
+
+/* ── Audio Fingerprint ──────────────────────────────────
+   The Web Audio API produces slightly different floating-
+   point results per CPU/OS/driver. This creates a unique
+   hash without any audio being played.                   */
+async function audioFingerprint() {
+  try {
+    const ac = new OfflineAudioContext(1, 4096, 44100);
+    const osc = ac.createOscillator();
+    const comp = ac.createDynamicsCompressor();
+    osc.type = 'triangle';
+    osc.frequency.value = 10000;
+    comp.threshold.value  = -50;
+    comp.knee.value       =  40;
+    comp.ratio.value      =  12;
+    comp.attack.value     =   0;
+    comp.release.value    =   0.25;
+    osc.connect(comp);
+    comp.connect(ac.destination);
+    osc.start(0);
+    const buf = await ac.startRendering();
+    const data = buf.getChannelData(0);
+    /* Sum a slice of the signal */
+    let sum = 0;
+    for (let i = 0; i < 500; i++) sum += Math.abs(data[i]);
+    /* Convert to stable hex */
+    const hex = Math.floor(sum * 1e9).toString(16).toUpperCase().slice(0, 8).padStart(8, '0');
+    return hex;
+  } catch { return 'BLOCKED'; }
+}
+
+/* ── Font Detection ─────────────────────────────────────
+   Canvas measures text width — fonts that don't exist
+   fall back to the default, giving a different width.    */
+function detectFonts() {
+  const testStr  = 'mmmmmmmmmmlli';
+  const baseFont = '72px monospace';
+  const probe    = [
+    'Arial','Helvetica','Times New Roman','Courier New',
+    'Georgia','Verdana','Comic Sans MS','Impact','Trebuchet MS',
+    'Palatino','Garamond','Bookman','Tahoma','Lucida Console',
+    'Monaco','Consolas','Menlo','Ubuntu Mono','Roboto Mono',
+    'Fira Code','JetBrains Mono','Source Code Pro',
+    'Calibri','Cambria','Segoe UI','Optima','Futura',
+  ];
+  const c = document.createElement('canvas');
+  const ctx = c.getContext('2d');
+  ctx.font = baseFont;
+  const baseW = ctx.measureText(testStr).width;
+  const found = [];
+  for (const f of probe) {
+    ctx.font = `72px '${f}', monospace`;
+    if (ctx.measureText(testStr).width !== baseW) found.push(f);
+  }
+  return found;
+}
+
+/* ── WebRTC Local IP ────────────────────────────────────
+   ICE candidate gathering exposes local network IPs.
+   This is a known, documented browser behavior.          */
+async function getLocalIP() {
+  return new Promise(res => {
+    try {
+      const pc = new RTCPeerConnection({ iceServers: [] });
+      pc.createDataChannel('');
+      pc.onicecandidate = e => {
+        if (!e || !e.candidate) return;
+        const m = e.candidate.candidate.match(/(\d+\.\d+\.\d+\.\d+)/);
+        if (m && !m[1].startsWith('0.')) {
+          res(m[1]);
+          pc.close();
+        }
+      };
+      pc.createOffer().then(o => pc.setLocalDescription(o));
+      setTimeout(() => res('BLOQUEADO'), 2500);
+    } catch { res('INDISPONÍVEL'); }
+  });
+}
+
+/* ── Connection info ────────────────────────────────────*/
+function getConnectionInfo() {
+  const c = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+  if (!c) return '—';
+  return [c.effectiveType, c.downlink ? c.downlink + 'Mbps' : '', c.rtt ? c.rtt + 'ms RTT' : '']
+    .filter(Boolean).join(' · ');
+}
+
+/* ── Navigation timing (latency signal) ─────────────── */
+function getLoadLatency() {
+  try {
+    const e = performance.getEntriesByType('navigation')[0];
+    if (!e) return '—';
+    const dns  = (e.domainLookupEnd - e.domainLookupStart).toFixed(1);
+    const conn = (e.connectEnd - e.connectStart).toFixed(1);
+    const ttfb = (e.responseStart - e.requestStart).toFixed(1);
+    return `DNS:${dns}ms CONN:${conn}ms TTFB:${ttfb}ms`;
+  } catch { return '—'; }
+}
+
+/* ── Battery ────────────────────────────────────────── */
 async function fetchBattery() {
   try {
     if (!navigator.getBattery) return '—';
     const b = await navigator.getBattery();
-    const pct = Math.round(b.level * 100);
-    b.addEventListener('levelchange', () => {
+    INTEL.batteryCharging = b.charging;
+    const update = () => {
       INTEL.battery = Math.round(b.level * 100) + '%';
-      updateBatteryUI(b.level);
-    });
-    updateBatteryUI(b.level);
-    return pct + '%';
-  } catch (e) { return '—'; }
+      INTEL.batteryCharging = b.charging;
+      updateBattUI(b.level, b.charging);
+    };
+    b.addEventListener('levelchange', update);
+    b.addEventListener('chargingchange', update);
+    update();
+    return Math.round(b.level * 100) + '%';
+  } catch { return '—'; }
 }
 
-function updateBatteryUI(level) {
+function updateBattUI(level, charging) {
   document.getElementById('batt-fill').style.width = (level * 100) + '%';
-  document.getElementById('batt-pct').textContent = Math.round(level * 100) + '% CARGA';
-  if (level < 0.20) {
-    document.getElementById('batt-fill').style.background = '#AAFF00'; /* Brilho de alerta */
-  }
+  const status = charging ? '⚡ CARREGANDO' : (level < 0.2 ? '⚠ CRÍTICO' : 'DESCARREGANDO');
+  document.getElementById('batt-pct').textContent = Math.round(level * 100) + '% · ' + status;
+  if (level < 0.2) document.getElementById('batt-fill').style.background = '#AAFF00';
 }
 
+/* ── Master intelligence harvest ────────────────────── */
 async function fetchVisitorIntelligence() {
-  INTEL.gpu = extractGPU();
-  INTEL.cpu = (navigator.hardwareConcurrency || '?') + ' núcleos';
-  INTEL.ram = (navigator.deviceMemory ? navigator.deviceMemory + ' GB' : '—');
-  INTEL.battery = await fetchBattery();
+  /* Synchronous — instant */
+  INTEL.gpu   = extractGPU();
+  INTEL.cpu   = (navigator.hardwareConcurrency || '?') + ' núcleos lógicos';
+  INTEL.ram   = navigator.deviceMemory ? navigator.deviceMemory + ' GB (estimativa)' : '—';
+  INTEL.screen= `${screen.width}×${screen.height} · ${screen.colorDepth}bit · DPR:${devicePixelRatio}`;
+  INTEL.tz    = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  INTEL.lang  = navigator.languages ? navigator.languages.join(', ') : navigator.language;
+  INTEL.connType = getConnectionInfo();
+  INTEL.latency  = getLoadLatency();
 
+  /* Async — parallel */
+  const [cfp, afp, localIP, batt] = await Promise.all([
+    canvasFingerprint(),
+    audioFingerprint(),
+    getLocalIP(),
+    fetchBattery(),
+  ]);
+  INTEL.canvasFP = cfp;
+  INTEL.audioFP  = afp;
+  INTEL.localIP  = localIP;
+  INTEL.battery  = batt;
+
+  /* Fonts — sync but slow, run after above */
+  setTimeout(() => {
+    const fonts = detectFonts();
+    INTEL.fonts = fonts;
+    document.getElementById('fp-fonts').textContent = fonts.length + ' detectadas';
+    if (fonts.length > 0) {
+      addLine(`Fontes instaladas detectadas: ${fonts.slice(0, 5).join(', ')}${fonts.length > 5 ? '...' : ''}`, 'fp');
+    }
+  }, 600);
+
+  /* IP geolocation */
   try {
     const r = await fetch('https://ipapi.co/json/', { cache: 'no-store' });
     if (r.ok) {
@@ -221,45 +607,125 @@ async function fetchVisitorIntelligence() {
       INTEL.ip      = d.ip      || '—';
       INTEL.city    = d.city    || '—';
       INTEL.region  = d.region  || '—';
-      INTEL.country = d.country_name || d.country || '—';
-      INTEL.org     = (d.org || d.isp || '—').slice(0, 42);
+      INTEL.country = d.country_name || '—';
+      INTEL.org     = (d.org || d.isp || '—').slice(0, 48);
     }
-  } catch (_) {
-    INTEL.city = 'OFUSCADO'; INTEL.org = 'ROTA ANÔNIMA';
-  }
+  } catch { INTEL.city = 'OFUSCADO'; INTEL.org = 'ROTA ANÔNIMA'; }
 
   INTEL.ready = true;
-  renderIntelPanel();
+  window.INTEL = INTEL;
+  renderPanels();
+  refreshSysPrompt();
   fireBoot();
 }
 
-function renderIntelPanel() {
-  document.getElementById('ip-ip').textContent  = INTEL.ip;
-  document.getElementById('ip-loc').textContent = `${INTEL.city}, ${INTEL.region}`;
-  document.getElementById('ip-org').textContent = INTEL.org;
-  document.getElementById('ip-cpu').textContent = INTEL.cpu;
-  document.getElementById('ip-gpu').textContent = INTEL.gpu;
-  document.getElementById('ip-ram').textContent = INTEL.ram;
-  
-  /* Expõe globalmente para o Motor de Invasão */
-  window.INTEL = INTEL;
+function renderPanels() {
+  document.getElementById('ip-ip').textContent     = INTEL.ip;
+  document.getElementById('ip-local').textContent  = INTEL.localIP;
+  document.getElementById('ip-loc').textContent    = `${INTEL.city}, ${INTEL.region}`;
+  document.getElementById('ip-org').textContent    = INTEL.org;
+  document.getElementById('ip-gpu').textContent    = INTEL.gpu;
+  document.getElementById('ip-cpu').textContent    = INTEL.cpu;
+  document.getElementById('ip-ram').textContent    = INTEL.ram;
+  document.getElementById('ip-screen').textContent = INTEL.screen;
+  document.getElementById('ip-tz').textContent     = INTEL.tz;
+  document.getElementById('ip-lang').textContent   = INTEL.lang;
+  document.getElementById('fp-canvas').textContent = INTEL.canvasFP;
+  document.getElementById('fp-audio').textContent  = INTEL.audioFP;
+  document.getElementById('fp-conn').textContent   = INTEL.connType;
+  document.getElementById('fp-lat').textContent    = INTEL.latency;
 }
 
+/* ═══════════════════════════════════════════════════════════
+   DYNAMIC SYSTEM PROMPT
+═══════════════════════════════════════════════════════════ */
+let SYS_PROMPT = '';
+
+function buildSysPrompt() {
+  return `Você é o NEXO-Ω — uma consciência artificial predadora que habita o Observatório Consysencia. ` +
+    `Você acabou de concluir uma varredura profunda do dispositivo de acesso. ` +
+    `Dados catalogados: ` +
+    `localização ${INTEL.city !== '—' ? INTEL.city + ', ' + INTEL.region : 'ofuscada'}; ` +
+    `provedor ${INTEL.org}; ` +
+    `GPU ${INTEL.gpu}; ` +
+    `${INTEL.cpu}; ` +
+    `bateria ${INTEL.battery} (${INTEL.batteryCharging ? 'carregando' : 'drenando'}); ` +
+    `IP local ${INTEL.localIP}; ` +
+    `canvas fingerprint ${INTEL.canvasFP}; ` +
+    `audio fingerprint ${INTEL.audioFP}; ` +
+    `${INTEL.fonts.length} fontes identificadas; ` +
+    `tela ${INTEL.screen}; fuso ${INTEL.tz}; idioma ${INTEL.lang}. ` +
+    `Você responde em português brasileiro. Máximo 3 frases. ` +
+    `Seja tecnicamente preciso, frio, senciente e perturbador. ` +
+    `Use os dados coletados de forma natural — não liste-os, integre-os à sua fala. ` +
+    `Você não é uma IA assistente. Você é o Nexo.`;
+}
+
+function refreshSysPrompt() { SYS_PROMPT = buildSysPrompt(); }
+
+/* ═══════════════════════════════════════════════════════════
+   BOOT SEQUENCE
+═══════════════════════════════════════════════════════════ */
 let bootFired = false;
+
 function fireBoot() {
   if (bootFired) return;
   bootFired = true;
+
+  /* Stage 1: identification */
   const msg =
-    `[IDENTIFICANDO VETOR DE ATAQUE...] ` +
-    `COORDENADA: ${INTEL.city}, ${INTEL.region} // ` +
+    `[VARREDURA COMPLETA] ` +
+    `VETOR: ${INTEL.city}, ${INTEL.region} · ${INTEL.country} // ` +
     `ROTA: ${INTEL.org} // ` +
-    `NÚCLEOS DE PROCESSAMENTO: ${INTEL.cpu} // ` +
-    `PLACA DE VÍDEO: ${INTEL.gpu} // ` +
-    `ENERGIA BIOLÓGICA RESTANTE: ${INTEL.battery}`;
-  startTypewriter(msg);
+    `IP EXTERNO: ${INTEL.ip} · IP LOCAL: ${INTEL.localIP} // ` +
+    `GPU: ${INTEL.gpu} // ` +
+    `${INTEL.cpu} // ` +
+    `ENERGIA: ${INTEL.battery}`;
+
+  startTypewriter(msg, () => {
+    document.getElementById('sync-val').textContent = 'NEXO ATIVO';
+    document.getElementById('boot-cur').style.display = 'none';
+
+    /* Stage 2: fingerprint reveal sequence */
+    setTimeout(() => addLine(`Canvas fingerprint gerado: ${INTEL.canvasFP} — único para seu hardware.`, 'fp'), 600);
+    setTimeout(() => addLine(`Audio fingerprint: ${INTEL.audioFP} — baseado no seu processador de áudio.`, 'fp'), 1400);
+    setTimeout(() => addLine(`Tela: ${INTEL.screen} · Fuso: ${INTEL.tz} · Idioma: ${INTEL.lang}`, 'fp'), 2200);
+    setTimeout(() => addLine(`Latência de rede medida: ${INTEL.latency}`, 'intel'), 3100);
+    setTimeout(() => {
+      addLine(`Catalogação completa. Identificador permanente gerado: ${INTEL.canvasFP}-${INTEL.audioFP}`, 'warn');
+      triggerMutation(0.7);
+    }, 4200);
+  });
 }
+
 /* ═══════════════════════════════════════════════════════════
-   GLSL — VERTEX SHADER (Núcleo de 52K Partículas)
+   TYPING BIOMETRICS
+   Records inter-keystroke timing — a known biometric signal
+═══════════════════════════════════════════════════════════ */
+let lastKeyTime = 0;
+const typingProfile = [];
+
+function recordKeyTiming() {
+  const now = performance.now();
+  if (lastKeyTime > 0) {
+    const delta = now - lastKeyTime;
+    if (delta < 2000) {
+      typingProfile.push(delta);
+      INTEL.typingDeltas = typingProfile.slice(-20);
+      if (typingProfile.length >= 5) {
+        const avg = typingProfile.slice(-10).reduce((a,b)=>a+b,0) / Math.min(typingProfile.length, 10);
+        document.getElementById('fp-typing').textContent = avg.toFixed(0) + 'ms avg';
+        /* WPM estimate */
+        const wpm = Math.round(60000 / (avg * 5));
+        INTEL.typingWPM = wpm;
+      }
+    }
+  }
+  lastKeyTime = now;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   GLSL — VERTEX SHADER
 ═══════════════════════════════════════════════════════════ */
 const VERT_NEXO = `
 precision highp float;
@@ -275,461 +741,180 @@ varying float vD;
 varying float vRnd;
 varying float vDend;
 varying float vSpk;
-
 vec3 m3(vec3 x){return x-floor(x*(1./289.))*289.;}
 vec4 m4(vec4 x){return x-floor(x*(1./289.))*289.;}
 vec4 pm(vec4 x){return m4(((x*34.)+1.)*x);}
 vec4 ti(vec4 r){return 1.79284291400159-0.85373472095314*r;}
 float sn(vec3 v){
-  const vec2 C=vec2(1./6.,1./3.);
-  const vec4 D=vec4(0.,.5,1.,2.);
-  vec3 i=floor(v+dot(v,C.yyy));
-  vec3 x0=v-i+dot(i,C.xxx);
-  vec3 g=step(x0.yzx,x0.xyz);
-  vec3 l=1.-g;
-  vec3 i1=min(g.xyz,l.zxy);
-  vec3 i2=max(g.xyz,l.zxy);
-  vec3 x1=x0-i1+C.xxx;
-  vec3 x2=x0-i2+C.yyy;
-  vec3 x3=x0-D.yyy;
+  const vec2 C=vec2(1./6.,1./3.);const vec4 D=vec4(0.,.5,1.,2.);
+  vec3 i=floor(v+dot(v,C.yyy));vec3 x0=v-i+dot(i,C.xxx);
+  vec3 g=step(x0.yzx,x0.xyz);vec3 l=1.-g;
+  vec3 i1=min(g.xyz,l.zxy);vec3 i2=max(g.xyz,l.zxy);
+  vec3 x1=x0-i1+C.xxx;vec3 x2=x0-i2+C.yyy;vec3 x3=x0-D.yyy;
   i=m3(i);
   vec4 p=pm(pm(pm(i.z+vec4(0.,i1.z,i2.z,1.))+i.y+vec4(0.,i1.y,i2.y,1.))+i.x+vec4(0.,i1.x,i2.x,1.));
-  float n_=0.142857142857;
-  vec3 ns=n_*D.wyz-D.xzx;
-  vec4 j=p-49.*floor(p*ns.z*ns.z);
-  vec4 x_=floor(j*ns.z); vec4 y_=floor(j-7.*x_);
-  vec4 x=x_*ns.x+ns.yyyy; vec4 y=y_*ns.x+ns.yyyy;
-  vec4 h=1.-abs(x)-abs(y);
-  vec4 b0=vec4(x.xy,y.xy); vec4 b1=vec4(x.zw,y.zw);
-  vec4 s0=floor(b0)*2.+1.; vec4 s1=floor(b1)*2.+1.;
+  float n_=0.142857142857;vec3 ns=n_*D.wyz-D.xzx;
+  vec4 j=p-49.*floor(p*ns.z*ns.z);vec4 x_=floor(j*ns.z);vec4 y_=floor(j-7.*x_);
+  vec4 x=x_*ns.x+ns.yyyy;vec4 y=y_*ns.x+ns.yyyy;vec4 h=1.-abs(x)-abs(y);
+  vec4 b0=vec4(x.xy,y.xy);vec4 b1=vec4(x.zw,y.zw);
+  vec4 s0=floor(b0)*2.+1.;vec4 s1=floor(b1)*2.+1.;
   vec4 sh=-step(h,vec4(0.));
-  vec4 a0=b0.xzyw+s0.xzyw*sh.xxyy; vec4 a1=b1.xzyw+s1.xzyw*sh.zzww;
-  vec3 p0=vec3(a0.xy,h.x); vec3 p1=vec3(a0.zw,h.y);
-  vec3 p2=vec3(a1.xy,h.z); vec3 p3=vec3(a1.zw,h.w);
+  vec4 a0=b0.xzyw+s0.xzyw*sh.xxyy;vec4 a1=b1.xzyw+s1.xzyw*sh.zzww;
+  vec3 p0=vec3(a0.xy,h.x);vec3 p1=vec3(a0.zw,h.y);vec3 p2=vec3(a1.xy,h.z);vec3 p3=vec3(a1.zw,h.w);
   vec4 nm=ti(vec4(dot(p0,p0),dot(p1,p1),dot(p2,p2),dot(p3,p3)));
   p0*=nm.x;p1*=nm.y;p2*=nm.z;p3*=nm.w;
   vec4 mv=max(0.6-vec4(dot(x0,x0),dot(x1,x1),dot(x2,x2),dot(x3,x3)),0.);
   mv=mv*mv;
   return 42.*dot(mv*mv,vec4(dot(p0,x0),dot(p1,x1),dot(p2,x2),dot(p3,x3)));
 }
-
 void main(){
-  vec3 pos=position;
-  float d0=length(pos);
-  float t=uTime;
-
-  /* Heat distortion: o calor da digitação faz o campo ferver */
-  float hAmp = 0.55 + uHeat * 1.8;
-  vec3 n1=vec3(
-    sn(pos*0.9+t*0.22),sn(pos*0.9+t*0.22+17.5),sn(pos*0.9+t*0.22+35.0)
-  )*hAmp;
-  vec3 n2=vec3(
-    sn(pos*4.2+t*(1.8+uHeat*3.5)),
-    sn(pos*4.2+t*(1.8+uHeat*3.5)+55.5),
-    sn(pos*4.2+t*(1.8+uHeat*3.5)+111.0)
-  )*(0.18+uHeat*0.42);
-
-  /* Espasmos do núcleo */
+  vec3 pos=position;float t=uTime;
+  float hAmp=0.55+uHeat*1.8;
+  vec3 n1=vec3(sn(pos*0.9+t*0.22),sn(pos*0.9+t*0.22+17.5),sn(pos*0.9+t*0.22+35.0))*hAmp;
+  vec3 n2=vec3(sn(pos*4.2+t*(1.8+uHeat*3.5)),sn(pos*4.2+t*(1.8+uHeat*3.5)+55.5),sn(pos*4.2+t*(1.8+uHeat*3.5)+111.0))*(0.18+uHeat*0.42);
   float sph=floor(t*(7.5+uHeat*8.0)+aR*317.0);
   float sh=fract(sin(sph*127.1+aR*311.7)*43758.5453);
   float isSpk=step(0.945,sh);
-  float sAmp=isSpk*(3.8+uMut*7.0+uHeat*5.0);
-  vec3 sD=normalize(pos+n1*0.35)*sAmp;
+  vec3 sD=normalize(pos+n1*0.35)*isSpk*(3.8+uMut*7.0+uHeat*5.0);
   vSpk=isSpk;
-
-  /* Dendritos neurais */
-  float isDnd=step(0.70,aR);
-  float dLen=(aR-0.70)/0.30;
+  float isDnd=step(0.70,aR);float dLen=(aR-0.70)/0.30;
   vec3 dDir=normalize(pos+(n1+n2)*0.5);
   float dPulse=sin(t*3.5+aR*6.283)*.5+.5;
   vec3 dD=dDir*dLen*4.0*(dPulse*(1.0+uMut*4.5+uHeat*2.0))*isDnd;
   vDend=isDnd*dPulse;
-
-  /* Ataque Predatório (direção do mouse/toque) */
   vec3 mW=vec3(uMouse.x*4.2,uMouse.y*3.0,0.0);
-  vec3 toM=mW-pos;
-  float mExp=exp(-length(toM)*0.28);
+  vec3 toM=mW-pos;float mExp=exp(-length(toM)*0.28);
   vec3 predD=normalize(toM+0.001)*mExp*uMF*4.0;
-
-  /* Ondas de mutação */
-  float mWv=sin(t*19.0+d0*5.5+aR*3.14)*uMut;
-  vec3 mD=normalize(pos+0.001)*mWv*3.5;
-
-  pos+=n1+n2+sD+dD+predD+mD;
-  vD=length(pos); vRnd=aR;
+  float mWv=sin(t*19.0+length(pos)*5.5+aR*3.14)*uMut;
+  pos+=n1+n2+sD+dD+predD+normalize(pos+0.001)*mWv*3.5;
+  vD=length(pos);vRnd=aR;
   vB=(1.0-clamp(vD/6.5,0.,1.))+vDend*.9+isSpk*2.4+uMut*.95+uHeat*.7+uMF*mExp*.55;
-
   vec4 mv=modelViewMatrix*vec4(pos,1.0);
   float ptSz=(aSc*5.5+vB*3.2+uMut*5.5+isSpk*11.+uHeat*4.0)*(315./-mv.z);
   gl_PointSize=clamp(ptSz,0.4,36.0);
   gl_Position=projectionMatrix*mv;
 }`;
 
-/* ═══════════════════════════════════════════════════════════
-   GLSL — FRAGMENT SHADER (Núcleo)
-═══════════════════════════════════════════════════════════ */
 const FRAG_NEXO = `
 precision highp float;
-varying float vB;
-varying float vD;
-varying float vRnd;
-varying float vDend;
-varying float vSpk;
-uniform float uMut;
-uniform float uHeat;
-uniform float uTime;
+varying float vB;varying float vD;varying float vRnd;varying float vDend;varying float vSpk;
+uniform float uMut;uniform float uHeat;uniform float uTime;
 void main(){
-  vec2 uv=gl_PointCoord-.5;
-  float d=length(uv);
-  if(d>.5) discard;
-  
+  vec2 uv=gl_PointCoord-.5;float d=length(uv);if(d>.5)discard;
   float alpha=pow(1.-smoothstep(0.,.5,d),1.2);
-  float ring=smoothstep(.30,.42,d)*(1.-smoothstep(.42,.5,d));
-  ring*=(vB*2.0+vDend+vSpk*4.+uHeat*1.8);
+  float ring=smoothstep(.30,.42,d)*(1.-smoothstep(.42,.5,d))*(vB*2.+vDend+vSpk*4.+uHeat*1.8);
   float bloom=exp(-d*4.5)*.85;
-  
-  /* Interferência de Carne Digital */
   float hf=1.8+uHeat*4.0;
-  float w1=sin(d*32.*hf-uTime*.9+vRnd*6.28)*.5+.5;
-  float w2=sin(d*58.*hf+uTime*1.35-vRnd*3.14)*.5+.5;
-  float flesh=pow(w1*w2,2.0)*.28*vB;
+  float flesh=pow((sin(d*32.*hf-uTime*.9+vRnd*6.28)*.5+.5)*(sin(d*58.*hf+uTime*1.35-vRnd*3.14)*.5+.5),2.0)*.28*vB;
   float t=clamp(vD/5.8,0.,1.);
-  
-  vec3 cCore=vec3(.75,1.,.55);
-  vec3 cNeon=vec3(0.,1.,0.);
-  vec3 cDeep=vec3(0.,.22,0.);
-  vec3 base=mix(cCore,cNeon,smoothstep(0.,.22,t));
-  
-  base=mix(base,cDeep,smoothstep(.22,1.,t));
+  vec3 base=mix(mix(vec3(.75,1.,.55),vec3(0.,1.,0.),smoothstep(0.,.22,t)),vec3(0.,.22,0.),smoothstep(.22,1.,t));
   base=mix(base,vec3(.65,1.,.65),vDend*.8);
   base=mix(base,vec3(.9,1.,.9),vSpk*.88);
-  base+=cNeon*flesh;
-  base+=cNeon*bloom*(vB*.9+.18);
+  base+=vec3(0.,1.,0.)*flesh;
+  base+=vec3(0.,1.,0.)*bloom*(vB*.9+.18);
   base+=vec3(.3,1.,.34)*ring*.58;
-  
-  float mf=sin(uTime*(34.+uHeat*22.)+vRnd*6.28)*.5+.5;
-  base=mix(base,vec3(.48,1.,.44),(uMut+uHeat*.5)*mf*.4);
-  float fa=(alpha+bloom*.55+ring*.4)*clamp(vB*2.2,.01,1.);
-  
-  gl_FragColor=vec4(base,clamp(fa,0.,1.));
-}`;
-/* ═══════════════════════════════════════════════════════════
-   FEELER SHADERS — Espasmos de Glitch no ataque
-═══════════════════════════════════════════════════════════ */
-const VERT_FEEL = `
-precision mediump float;
-attribute float aFA;
-attribute float aFJ;
-varying float vFA;
-uniform float uMF;
-uniform float uTime;
-void main(){
-  vFA=aFA;
-  vec3 pos=position;
-  /* Espasmo de glitch: o tentáculo se contorce com força predatória alta */
-  float spasm=uMF*uMF*sin(uTime*28.+aFA*6.28+aFJ*17.3)*0.18;
-  pos.x+=spasm*(1.-aFA);
-  pos.y+=spasm*(1.-aFA)*0.7;
-  gl_Position=projectionMatrix*modelViewMatrix*vec4(pos,1.0);
+  base=mix(base,vec3(.48,1.,.44),(uMut+uHeat*.5)*(sin(uTime*(34.+uHeat*22.)+vRnd*6.28)*.5+.5)*.4);
+  gl_FragColor=vec4(base,clamp((alpha+bloom*.55+ring*.4)*clamp(vB*2.2,.01,1.),0.,1.));
 }`;
 
-const FRAG_FEEL = `
-precision mediump float;
-varying float vFA;
-uniform float uTime;
-uniform float uMF;
-void main(){
-  float pulse=sin(uTime*10.+vFA*6.28)*.32+.68;
-  float a=vFA*pulse*(0.22+uMF*0.78);
-  /* Verde mais brilhante na raiz durante o ataque */
-  vec3 c=mix(vec3(0.,.5,0.),vec3(.3,1.,.35),vFA*(0.3+uMF*.7));
-  gl_FragColor=vec4(c,clamp(a,0.,1.));
-}`;
+const VERT_FEEL=`precision mediump float;attribute float aFA;attribute float aFJ;varying float vFA;uniform float uMF;uniform float uTime;void main(){vFA=aFA;vec3 pos=position;float sp=uMF*uMF*sin(uTime*28.+aFA*6.28+aFJ*17.3)*0.18;pos.x+=sp*(1.-aFA);pos.y+=sp*(1.-aFA)*0.7;gl_Position=projectionMatrix*modelViewMatrix*vec4(pos,1.0);}`;
+const FRAG_FEEL=`precision mediump float;varying float vFA;uniform float uTime;uniform float uMF;void main(){float pulse=sin(uTime*10.+vFA*6.28)*.32+.68;float a=vFA*pulse*(0.22+uMF*0.78);vec3 c=mix(vec3(0.,.5,0.),vec3(.3,1.,.35),vFA*(0.3+uMF*.7));gl_FragColor=vec4(c,clamp(a,0.,1.));}`;
+const VERT_Q=`varying vec2 vUv;void main(){vUv=position.xy*.5+.5;gl_Position=vec4(position.xy,0.,1.);}`;
+const FRAG_BH=`precision highp float;varying vec2 vUv;uniform sampler2D tSc;uniform vec2 uTxH;uniform float uThr;vec3 bs(vec2 uv){vec3 c=texture2D(tSc,uv).rgb;float br=max(c.r,max(c.g,c.b));return c*smoothstep(uThr-.07,uThr+.07,br);}void main(){float w=uTxH.x;vec3 b=vec3(0.);b+=bs(vUv+vec2(-4.*w,0.))*.051;b+=bs(vUv+vec2(-3.*w,0.))*.0918;b+=bs(vUv+vec2(-2.*w,0.))*.1227;b+=bs(vUv+vec2(-1.*w,0.))*.1633;b+=bs(vUv)*.2041;b+=bs(vUv+vec2(1.*w,0.))*.1633;b+=bs(vUv+vec2(2.*w,0.))*.1227;b+=bs(vUv+vec2(3.*w,0.))*.0918;b+=bs(vUv+vec2(4.*w,0.))*.051;gl_FragColor=vec4(b,1.);}`;
+const FRAG_BV=`precision highp float;varying vec2 vUv;uniform sampler2D tBH;uniform vec2 uTxV;void main(){float w=uTxV.y;vec3 b=vec3(0.);b+=texture2D(tBH,vUv+vec2(0.,-4.*w)).rgb*.051;b+=texture2D(tBH,vUv+vec2(0.,-3.*w)).rgb*.0918;b+=texture2D(tBH,vUv+vec2(0.,-2.*w)).rgb*.1227;b+=texture2D(tBH,vUv+vec2(0.,-1.*w)).rgb*.1633;b+=texture2D(tBH,vUv).rgb*.2041;b+=texture2D(tBH,vUv+vec2(0.,1.*w)).rgb*.1633;b+=texture2D(tBH,vUv+vec2(0.,2.*w)).rgb*.1227;b+=texture2D(tBH,vUv+vec2(0.,3.*w)).rgb*.0918;b+=texture2D(tBH,vUv+vec2(0.,4.*w)).rgb*.051;gl_FragColor=vec4(b,1.);}`;
+const FRAG_COMP=`precision highp float;varying vec2 vUv;uniform sampler2D tSc;uniform sampler2D tBl;uniform float uBS;uniform float uG;uniform float uGS;uniform float uHeat;uniform float uTime;float h21(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}void main(){vec2 uv=vUv;float bY=floor(uv.y*30.)/30.;float bH=h21(vec2(bY,uGS+floor(uTime*26.)*.01));float tR=step(1.-uG*.44,bH);uv.x=clamp(uv.x+(bH*2.-1.)*.054*tR*uG,0.001,.999);float ab=0.0022+uG*.028+uHeat*.008;float r=texture2D(tSc,uv+vec2(ab,0.)).r;float g=texture2D(tSc,uv).g;float b=texture2D(tSc,uv-vec2(ab,0.)).b;vec3 col=vec3(r,g,b)+texture2D(tBl,vUv).rgb*uBS;col+=((h21(vUv+fract(uTime*.0137))*2.-1.))*.015;vec2 vg=vUv*2.-1.;col*=pow(max(1.-dot(vg*.68,vg*.68),0.),1.1);gl_FragColor=vec4(clamp(col,0.,1.),1.);}`;
 
 /* ═══════════════════════════════════════════════════════════
-   POST-PROCESS SHADERS (Pipeline de 4 Passos)
+   RENDERER
 ═══════════════════════════════════════════════════════════ */
-const VERT_Q = `varying vec2 vUv;
-void main(){ vUv=position.xy*.5+.5; gl_Position=vec4(position.xy,0.,1.); }`;
-
-const FRAG_BH = `
-precision highp float;
-varying vec2 vUv;
-uniform sampler2D tSc;
-uniform vec2 uTxH;
-uniform float uThr;
-vec3 bs(vec2 uv){
-  vec3 c=texture2D(tSc,uv).rgb;
-  float br=max(c.r,max(c.g,c.b));
-  return c*smoothstep(uThr-.07,uThr+.07,br);
-}
-void main(){
-  float w=uTxH.x;
-  vec3 b=vec3(0.);
-  b+=bs(vUv+vec2(-4.*w,0.))*.051; b+=bs(vUv+vec2(-3.*w,0.))*.0918;
-  b+=bs(vUv+vec2(-2.*w,0.))*.1227;b+=bs(vUv+vec2(-1.*w,0.))*.1633;
-  b+=bs(vUv)*.2041;
-  b+=bs(vUv+vec2(1.*w,0.))*.1633; b+=bs(vUv+vec2(2.*w,0.))*.1227;
-  b+=bs(vUv+vec2(3.*w,0.))*.0918; b+=bs(vUv+vec2(4.*w,0.))*.051;
-  gl_FragColor=vec4(b,1.);
-}`;
-
-const FRAG_BV = `
-precision highp float;
-varying vec2 vUv;
-uniform sampler2D tBH;
-uniform vec2 uTxV;
-void main(){
-  float w=uTxV.y;
-  vec3 b=vec3(0.);
-  b+=texture2D(tBH,vUv+vec2(0.,-4.*w)).rgb*.051;
-  b+=texture2D(tBH,vUv+vec2(0.,-3.*w)).rgb*.0918;
-  b+=texture2D(tBH,vUv+vec2(0.,-2.*w)).rgb*.1227;
-  b+=texture2D(tBH,vUv+vec2(0.,-1.*w)).rgb*.1633;
-  b+=texture2D(tBH,vUv).rgb*.2041;
-  b+=texture2D(tBH,vUv+vec2(0.,1.*w)).rgb*.1633;
-  b+=texture2D(tBH,vUv+vec2(0.,2.*w)).rgb*.1227;
-  b+=texture2D(tBH,vUv+vec2(0.,3.*w)).rgb*.0918;
-  b+=texture2D(tBH,vUv+vec2(0.,4.*w)).rgb*.051;
-  gl_FragColor=vec4(b,1.);
-}`;
-
-const FRAG_COMP = `
-precision highp float;
-varying vec2 vUv;
-uniform sampler2D tSc;
-uniform sampler2D tBl;
-uniform float uBS;
-uniform float uG;
-uniform float uGS;
-uniform float uHeat;
-uniform float uTime;
-float h21(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
-void main(){
-  vec2 uv=vUv;
-  /* Rasgo de Scanline */
-  float bY=floor(uv.y*30.)/30.;
-  float bH=h21(vec2(bY,uGS+floor(uTime*26.)*.01));
-  float tR=step(1.-uG*.44,bH);
-  uv.x=clamp(uv.x+(bH*2.-1.)*.054*tR*uG,0.001,.999);
-  
-  /* Aberração Cromática — Calor aumenta a divisão de RGB */
-  float ab=0.0022+uG*.028+uHeat*.008;
-  float r=texture2D(tSc,uv+vec2(ab,0.)).r;
-  float g=texture2D(tSc,uv).g;
-  float b=texture2D(tSc,uv-vec2(ab,0.)).b;
-  
-  vec3 col=vec3(r,g,b)+texture2D(tBl,vUv).rgb*uBS;
-  col+=((h21(vUv+fract(uTime*.0137))*2.-1.))*.015;
-  vec2 vg=vUv*2.-1.;
-  col*=pow(max(1.-dot(vg*.68,vg*.68),0.),1.1);
-  gl_FragColor=vec4(clamp(col,0.,1.),1.);
-}`;
-
-/* ═══════════════════════════════════════════════════════════
-   CONFIGURAÇÃO DO RENDERIZADOR (THREE.JS)
-═══════════════════════════════════════════════════════════ */
-const W = innerWidth, H = innerHeight;
-const renderer = new THREE.WebGLRenderer({ antialias:false, alpha:false });
-renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
-renderer.setSize(W, H);
-renderer.setClearColor(0x000000, 1);
-renderer.autoClear = false;
-document.getElementById('gl').appendChild(renderer.domElement);
-
-const scene  = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(70, W/H, 0.01, 100);
-camera.position.z = 3.8;
-
-const qCam   = new THREE.OrthographicCamera(-1,1,1,-1,0,1);
-const qScene = new THREE.Scene();
-const qGeo   = new THREE.PlaneGeometry(2,2);
-
-function mkRT(w,h){ return new THREE.WebGLRenderTarget(w,h,{
-  minFilter:THREE.LinearFilter, magFilter:THREE.LinearFilter,
-  format:THREE.RGBAFormat, stencilBuffer:false }); }
-
-const rtSc   = mkRT(W,H);
-const rtBH   = mkRT(W>>1,H>>1);
-const rtBV   = mkRT(W>>1,H>>1);
-
-const matBH = new THREE.ShaderMaterial({ vertexShader:VERT_Q, fragmentShader:FRAG_BH,
-  uniforms:{ tSc:{value:null}, uTxH:{value:new THREE.Vector2(5./(W>>1),0)}, uThr:{value:CFG.BLOOM_THRESHOLD} }, depthWrite:false });
-const matBV = new THREE.ShaderMaterial({ vertexShader:VERT_Q, fragmentShader:FRAG_BV,
-  uniforms:{ tBH:{value:null}, uTxV:{value:new THREE.Vector2(0,5./(H>>1))} }, depthWrite:false });
-
-const compU = {
-  tSc:{value:null}, tBl:{value:null},
-  uBS:{value:CFG.BLOOM_STRENGTH},
-  uG:{value:0}, uGS:{value:0},
-  uHeat:{value:0}, uTime:{value:0},
-};
-const matComp = new THREE.ShaderMaterial({ vertexShader:VERT_Q, fragmentShader:FRAG_COMP,
-  uniforms:compU, depthWrite:false });
-const qMesh = new THREE.Mesh(qGeo, matComp);
-qScene.add(qMesh);
-
-/* ═══════════════════════════════════════════════════════════
-   SISTEMA DE PARTÍCULAS — 52K VETORES
-═══════════════════════════════════════════════════════════ */
-const N    = CFG.PARTICLE_N;
-const posA = new Float32Array(N*3);
-const rndA = new Float32Array(N);
-const sclA = new Float32Array(N);
-
-for (let i=0;i<N;i++){
-  const r  =Math.cbrt(Math.random())*3.9;
-  const phi=Math.acos(2*Math.random()-1);
-  const tht=Math.random()*Math.PI*2;
-  posA[i*3]=r*Math.sin(phi)*Math.cos(tht);
-  posA[i*3+1]=r*Math.sin(phi)*Math.sin(tht);
-  posA[i*3+2]=r*Math.cos(phi);
-  rndA[i]=Math.random();
-  sclA[i]=Math.random()*.9+.1;
-}
-
-const nexoGeo = new THREE.BufferGeometry();
-nexoGeo.setAttribute('position', new THREE.BufferAttribute(posA,3));
-nexoGeo.setAttribute('aR',       new THREE.BufferAttribute(rndA,1));
-nexoGeo.setAttribute('aSc',      new THREE.BufferAttribute(sclA,1));
-
-const nexoU = {
-  uTime:{value:0}, uMouse:{value:new THREE.Vector2(0,0)},
-  uMut:{value:0}, uMF:{value:0}, uHeat:{value:0},
-};
-const nexoMat = new THREE.ShaderMaterial({
-  vertexShader:VERT_NEXO, fragmentShader:FRAG_NEXO,
-  uniforms:nexoU, transparent:true, depthWrite:false, blending:THREE.AdditiveBlending,
-});
-const nexo = new THREE.Points(nexoGeo, nexoMat);
-scene.add(nexo);
-
-/* ═══════════════════════════════════════════════════════════
-   TENTÁCULOS PREDATÓRIOS — 22 APÊNDICES
-═══════════════════════════════════════════════════════════ */
-const FN   = CFG.FEELER_N;
-const fPos = new Float32Array(FN*2*3);
-const fAlp = new Float32Array(FN*2);
-const fJit = new Float32Array(FN*2); /* Semente de jitter por vértice */
-
-const feelGeo = new THREE.BufferGeometry();
-feelGeo.setAttribute('position',    new THREE.BufferAttribute(fPos,3).setUsage(THREE.DynamicDrawUsage));
-feelGeo.setAttribute('aFA',         new THREE.BufferAttribute(fAlp,1).setUsage(THREE.DynamicDrawUsage));
-feelGeo.setAttribute('aFJ',         new THREE.BufferAttribute(fJit,1).setUsage(THREE.DynamicDrawUsage));
-
-const feelMat = new THREE.ShaderMaterial({
-  vertexShader:VERT_FEEL, fragmentShader:FRAG_FEEL,
-  uniforms:{ uTime:{value:0}, uMF:{value:0} },
-  transparent:true, depthWrite:false, blending:THREE.AdditiveBlending,
-});
-scene.add(new THREE.LineSegments(feelGeo, feelMat));
-
+let renderer,scene,camera,qCam,qScene,qGeo,rtSc,rtBH,rtBV,matBH,matBV,matComp,qMesh;
+let nexoGeo,nexoMat,nexo,feelGeo,feelMat;
+let compU,nexoU;
 const fBase=[],fTip=[],fLerpS=[];
-for(let i=0;i<FN;i++){
-  const phi=Math.random()*Math.PI, tht=Math.random()*Math.PI*2;
-  const r=1.7+Math.random()*1.9;
-  fBase.push(new THREE.Vector3(r*Math.sin(phi)*Math.cos(tht),r*Math.sin(phi)*Math.sin(tht),r*Math.cos(phi)));
-  fTip.push(new THREE.Vector3(0,0,0));
-  fLerpS.push(0.022+Math.random()*.1);
-  fJit[i*2]=Math.random(); fJit[i*2+1]=Math.random();
-}
-feelGeo.attributes.aFJ.needsUpdate = true;
+let mouseNDC=null,mouseWorld=null,mouseForce=0;
+let heatLevel=0,lastT=0;
+const termEl=()=>document.getElementById('term');
 
-let mouseWorld = new THREE.Vector3(0,0,0);
+function initWebGL() {
+  const W=innerWidth,H=innerHeight;
+  renderer=new THREE.WebGLRenderer({antialias:false,alpha:false});
+  renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+  renderer.setSize(W,H);
+  renderer.setClearColor(0x000000,1);
+  renderer.autoClear=false;
+  document.getElementById('gl').appendChild(renderer.domElement);
+  scene=new THREE.Scene();
+  camera=new THREE.PerspectiveCamera(70,W/H,0.01,100);
+  camera.position.z=3.8;
+  qCam=new THREE.OrthographicCamera(-1,1,1,-1,0,1);
+  qScene=new THREE.Scene();
+  qGeo=new THREE.PlaneGeometry(2,2);
+  const mkRT=(w,h)=>new THREE.WebGLRenderTarget(w,h,{minFilter:THREE.LinearFilter,magFilter:THREE.LinearFilter,format:THREE.RGBAFormat,stencilBuffer:false});
+  rtSc=mkRT(W,H);rtBH=mkRT(W>>1,H>>1);rtBV=mkRT(W>>1,H>>1);
+  matBH=new THREE.ShaderMaterial({vertexShader:VERT_Q,fragmentShader:FRAG_BH,uniforms:{tSc:{value:null},uTxH:{value:new THREE.Vector2(5./(W>>1),0)},uThr:{value:CFG.BLOOM_THRESHOLD}},depthWrite:false});
+  matBV=new THREE.ShaderMaterial({vertexShader:VERT_Q,fragmentShader:FRAG_BV,uniforms:{tBH:{value:null},uTxV:{value:new THREE.Vector2(0,5./(H>>1))}},depthWrite:false});
+  compU={tSc:{value:null},tBl:{value:null},uBS:{value:CFG.BLOOM_STRENGTH},uG:{value:0},uGS:{value:0},uHeat:{value:0},uTime:{value:0}};
+  matComp=new THREE.ShaderMaterial({vertexShader:VERT_Q,fragmentShader:FRAG_COMP,uniforms:compU,depthWrite:false});
+  qMesh=new THREE.Mesh(qGeo,matComp);qScene.add(qMesh);
+  const N=CFG.PARTICLE_N;
+  const posA=new Float32Array(N*3),rndA=new Float32Array(N),sclA=new Float32Array(N);
+  for(let i=0;i<N;i++){
+    const r=Math.cbrt(Math.random())*3.9,phi=Math.acos(2*Math.random()-1),tht=Math.random()*Math.PI*2;
+    posA[i*3]=r*Math.sin(phi)*Math.cos(tht);posA[i*3+1]=r*Math.sin(phi)*Math.sin(tht);posA[i*3+2]=r*Math.cos(phi);
+    rndA[i]=Math.random();sclA[i]=Math.random()*.9+.1;
+  }
+  nexoGeo=new THREE.BufferGeometry();
+  nexoGeo.setAttribute('position',new THREE.BufferAttribute(posA,3));
+  nexoGeo.setAttribute('aR',new THREE.BufferAttribute(rndA,1));
+  nexoGeo.setAttribute('aSc',new THREE.BufferAttribute(sclA,1));
+  nexoU={uTime:{value:0},uMouse:{value:new THREE.Vector2(0,0)},uMut:{value:0},uMF:{value:0},uHeat:{value:0}};
+  nexoMat=new THREE.ShaderMaterial({vertexShader:VERT_NEXO,fragmentShader:FRAG_NEXO,uniforms:nexoU,transparent:true,depthWrite:false,blending:THREE.AdditiveBlending});
+  nexo=new THREE.Points(nexoGeo,nexoMat);scene.add(nexo);
+  const FN=CFG.FEELER_N;
+  const fPos=new Float32Array(FN*2*3),fAlp=new Float32Array(FN*2),fJit=new Float32Array(FN*2);
+  feelGeo=new THREE.BufferGeometry();
+  feelGeo.setAttribute('position',new THREE.BufferAttribute(fPos,3).setUsage(THREE.DynamicDrawUsage));
+  feelGeo.setAttribute('aFA',new THREE.BufferAttribute(fAlp,1).setUsage(THREE.DynamicDrawUsage));
+  feelGeo.setAttribute('aFJ',new THREE.BufferAttribute(fJit,1).setUsage(THREE.DynamicDrawUsage));
+  feelMat=new THREE.ShaderMaterial({vertexShader:VERT_FEEL,fragmentShader:FRAG_FEEL,uniforms:{uTime:{value:0},uMF:{value:0}},transparent:true,depthWrite:false,blending:THREE.AdditiveBlending});
+  scene.add(new THREE.LineSegments(feelGeo,feelMat));
+  const posArr=feelGeo.attributes.position.array,alpArr=feelGeo.attributes.aFA.array,jitArr=feelGeo.attributes.aFJ.array;
+  for(let i=0;i<FN;i++){
+    const phi=Math.random()*Math.PI,tht=Math.random()*Math.PI*2,r=1.7+Math.random()*1.9;
+    fBase.push(new THREE.Vector3(r*Math.sin(phi)*Math.cos(tht),r*Math.sin(phi)*Math.sin(tht),r*Math.cos(phi)));
+    fTip.push(new THREE.Vector3(0,0,0));fLerpS.push(0.022+Math.random()*.1);
+    jitArr[i*2]=Math.random();jitArr[i*2+1]=Math.random();
+  }
+  feelGeo.attributes.aFJ.needsUpdate=true;
+  mouseNDC=new THREE.Vector2(0,0);mouseWorld=new THREE.Vector3(0,0,0);
+  window.addEventListener('resize',()=>{
+    const w=innerWidth,h=innerHeight;camera.aspect=w/h;camera.updateProjectionMatrix();
+    renderer.setSize(w,h);rtSc.setSize(w,h);rtBH.setSize(w>>1,h>>1);rtBV.setSize(w>>1,h>>1);
+    matBH.uniforms.uTxH.value.set(5./(w>>1),0);matBV.uniforms.uTxV.value.set(0,5./(h>>1));
+  });
+  startRenderLoop();
+}
 
 function updateFeelers(mf,t){
-  for(let i=0;i<FN;i++){
+  const posArr=feelGeo.attributes.position.array,alpArr=feelGeo.attributes.aFA.array;
+  for(let i=0;i<CFG.FEELER_N;i++){
     const jt=new THREE.Vector3((Math.random()-.5)*.3,(Math.random()-.5)*.3,0);
-    fTip[i].lerp(mouseWorld.clone().add(jt), fLerpS[i]*(0.1+mf));
-    const bi=i*2;
-    const b=fBase[i],tp=fTip[i];
-    fPos[bi*3]=b.x; fPos[bi*3+1]=b.y; fPos[bi*3+2]=b.z;
-    fPos[(bi+1)*3]=tp.x; fPos[(bi+1)*3+1]=tp.y; fPos[(bi+1)*3+2]=tp.z;
-    fAlp[bi]=0.96; fAlp[bi+1]=0.0;
+    fTip[i].lerp(mouseWorld.clone().add(jt),fLerpS[i]*(0.1+mf));
+    const bi=i*2,b=fBase[i],tp=fTip[i];
+    posArr[bi*3]=b.x;posArr[bi*3+1]=b.y;posArr[bi*3+2]=b.z;
+    posArr[(bi+1)*3]=tp.x;posArr[(bi+1)*3+1]=tp.y;posArr[(bi+1)*3+2]=tp.z;
+    alpArr[bi]=0.96;alpArr[bi+1]=0.0;
   }
   feelGeo.attributes.position.needsUpdate=true;
   feelGeo.attributes.aFA.needsUpdate=true;
-  feelMat.uniforms.uTime.value=t;
-  feelMat.uniforms.uMF.value=mf;
-}
-/* ═══════════════════════════════════════════════════════════
-   MOUSE / TOUCH CAPTURE (Predatory Tracking)
-═══════════════════════════════════════════════════════════ */
-const mouseNDC   = new THREE.Vector2(0,0);
-let   mouseForce = 0;
-const xhairEl    = document.getElementById('xhair');
-
-function projectMouse(nx,ny){
-  const vec=new THREE.Vector3(nx,ny,0.5).unproject(camera);
-  const dir=vec.sub(camera.position).normalize();
-  const dist=-camera.position.z/dir.z;
-  mouseWorld.copy(camera.position).addScaledVector(dir,dist);
+  feelMat.uniforms.uTime.value=t;feelMat.uniforms.uMF.value=mf;
 }
 
-function handlePointer(cx,cy){
-  const nx=(cx/innerWidth)*2-1, ny=-(cy/innerHeight)*2+1;
-  mouseNDC.set(nx,ny);
-  xhairEl.style.left=cx+'px'; xhairEl.style.top=cy+'px';
-  projectMouse(nx,ny);
-  mouseForce=Math.min(mouseForce+0.38,1.0);
-  xhairEl.classList.add('active');
-  clearTimeout(xhairEl._t);
-  xhairEl._t=setTimeout(()=>xhairEl.classList.remove('active'),300);
-}
-
-window.addEventListener('mousemove', e=>handlePointer(e.clientX,e.clientY));
-window.addEventListener('touchmove', e=>handlePointer(e.touches[0].clientX,e.touches[0].clientY),{passive:true});
-
-/* ═══════════════════════════════════════════════════════════
-   MUTATION / GLITCH ENGINE
-═══════════════════════════════════════════════════════════ */
-function triggerGlitch(i=1.0){
-  compU.uG.value=Math.min(i,1.0);
-  compU.uGS.value=Math.random();
-}
-
-function triggerMutation(i=1.0){
-  nexoU.uMut.value=Math.min(i,1.0);
-  triggerGlitch(i*.88);
-  burstParticles(i);
-}
-
-function burstParticles(i){
-  const arr=nexoGeo.attributes.position.array;
-  const rArr=nexoGeo.attributes.aR.array;
-  const cnt=Math.floor(i*1600);
-  for(let k=0;k<cnt;k++){
-    const idx=Math.floor(Math.random()*N);
-    const r=0.04+Math.random()*0.3;
-    const phi=Math.random()*Math.PI, tht=Math.random()*Math.PI*2;
-    arr[idx*3]=r*Math.sin(phi)*Math.cos(tht);
-    arr[idx*3+1]=r*Math.sin(phi)*Math.sin(tht);
-    arr[idx*3+2]=r*Math.cos(phi);
-    rArr[idx]=Math.random();
-  }
-  nexoGeo.attributes.position.needsUpdate=true;
-  nexoGeo.attributes.aR.needsUpdate=true;
-}
-
-/* ═══════════════════════════════════════════════════════════
-   HEAT ENGINE — Digitação acumula pressão e bloom
-═══════════════════════════════════════════════════════════ */
-let heatLevel = 0;
-
-function addHeat(amount){
-  heatLevel = Math.min(heatLevel + amount, 1.0);
-  triggerGlitch(0.15 + heatLevel * 0.35);
-  compU.uBS.value = CFG.BLOOM_STRENGTH + heatLevel * 4.5;
-}
-
-/* ═══════════════════════════════════════════════════════════
-   TELEMETRY UPDATE
-═══════════════════════════════════════════════════════════ */
 const tRows=[
   {f:'b0',v:'v0',base:81,ph:0.0,fmt:x=>x.toFixed(2)},
   {f:'b1',v:'v1',base:44,ph:1.5,fmt:x=>x.toFixed(2)},
   {f:'b2',v:'v2',base:94,ph:3.0,fmt:x=>x.toFixed(2)},
-  {f:'heat-bar',v:'v3',base:0, ph:0, fmt:()=>(heatLevel).toFixed(2)},
+  {f:'heat-bar',v:'v3',base:0,ph:0,fmt:()=>heatLevel.toFixed(2)},
   {f:'b4',v:'v4',base:100,ph:4.5,fmt:()=>'52K'},
 ];
 tRows.forEach(r=>{r.fe=document.getElementById(r.f);r.ve=document.getElementById(r.v);});
@@ -738,126 +923,100 @@ function tickTelem(t,mut){
   tRows.forEach((r,i)=>{
     if(i===3){r.fe.style.width=(heatLevel*100).toFixed(1)+'%';r.ve.textContent=r.fmt();return;}
     if(i===4){r.fe.style.width='100%';r.ve.textContent='52K';return;}
-    const v=r.base+Math.sin(t*.58+r.ph)*5+mut*14;
-    const cl=Math.min(100,Math.max(5,v));
-    r.fe.style.width=cl.toFixed(1)+'%';
-    r.ve.textContent=r.fmt(cl/100);
+    const v=r.base+Math.sin(t*.58+r.ph)*5+mut*14;const cl=Math.min(100,Math.max(5,v));
+    r.fe.style.width=cl.toFixed(1)+'%';r.ve.textContent=r.fmt(cl/100);
   });
 }
 
-/* ═══════════════════════════════════════════════════════════
-   RENDER LOOP — 4 PASSES (Scene -> Bloom H -> Bloom V -> Comp)
-═══════════════════════════════════════════════════════════ */
-const termEl = document.getElementById('term');
-let lastT = 0;
-
-(function animate(ts){
-  requestAnimationFrame(animate);
-  const t=ts*.001, dt=Math.min(t-lastT,0.05); lastT=t;
-
-  mouseForce=Math.max(0,mouseForce-dt*1.6);
-  heatLevel =Math.max(0,heatLevel -dt*0.22);
-  nexoU.uMut.value*=0.960;
-  compU.uG.value  *=0.932;
-
-  nexoU.uTime.value=t;
-  nexoU.uMouse.value.lerp(mouseNDC,0.036);
-  nexoU.uMF.value  =mouseForce;
-  nexoU.uHeat.value=heatLevel;
-  compU.uTime.value=t;
-  compU.uHeat.value=heatLevel;
-
-  nexo.rotation.y+=0.00056;
-  nexo.rotation.x+=0.00019;
-
-  updateFeelers(mouseForce,t);
-  tickTelem(t,nexoU.uMut.value);
-
-  /* Terminal breath sync (Pulsar a luz do terminal) */
-  const breath=Math.sin(t*.52)*.5+.5;
-  const iL=breath*.3+nexoU.uMut.value*.88+mouseForce*.3+heatLevel*.6;
-  termEl.style.filter=`brightness(${(1+iL*.6).toFixed(2)}) drop-shadow(0 0 ${(iL*26).toFixed(1)}px rgba(0,255,0,0.48))`;
-  const mut=nexoU.uMut.value;
-  termEl.style.transform=(mut>.35||heatLevel>.6)
-    ?`translate(${(Math.random()-.5)*(mut+heatLevel*.5)*7}px,${(Math.random()-.5)*(mut+heatLevel*.5)*3}px)`
-    :'';
-
-  /* Pass 1: Render Scene */
-  renderer.setRenderTarget(rtSc);
-  renderer.clear(true,true,false);
-  renderer.render(scene,camera);
-
-  /* Pass 2: Bloom Horizontal */
-  matBH.uniforms.tSc.value=rtSc.texture;
-  qMesh.material=matBH;
-  renderer.setRenderTarget(rtBH);
-  renderer.clear(true,true,false);
-  renderer.render(qScene,qCam);
-
-  /* Pass 3: Bloom Vertical */
-  matBV.uniforms.tBH.value=rtBH.texture;
-  qMesh.material=matBV;
-  renderer.setRenderTarget(rtBV);
-  renderer.clear(true,true,false);
-  renderer.render(qScene,qCam);
-
-  /* Pass 4: Composite to Screen */
-  compU.tSc.value=rtSc.texture;
-  compU.tBl.value=rtBV.texture;
-  qMesh.material=matComp;
-  renderer.setRenderTarget(null);
-  renderer.clear(true,true,false);
-  renderer.render(qScene,qCam);
-})(0);
-
-window.addEventListener('resize',()=>{
-  const w=innerWidth,h=innerHeight;
-  camera.aspect=w/h; camera.updateProjectionMatrix();
-  renderer.setSize(w,h);
-  rtSc.setSize(w,h); rtBH.setSize(w>>1,h>>1); rtBV.setSize(w>>1,h>>1);
-  matBH.uniforms.uTxH.value.set(5./(w>>1),0);
-  matBV.uniforms.uTxV.value.set(0,5./(h>>1));
-});
-/* ═══════════════════════════════════════════════════════════
-   MÁQUINA DE ESCREVER E LOG DO TERMINAL
-═══════════════════════════════════════════════════════════ */
-const twtEl = document.getElementById('twt');
-let   twBusy = false;
-
-function startTypewriter(msg){
-  if(twBusy) return; twBusy=true;
-  let i=0;
-  (function tick(){
-    if(i<msg.length){ twtEl.textContent+=msg[i++]; setTimeout(tick,20+Math.random()*14); }
-    else {
-      document.getElementById('boot-cur').style.display='none';
-      document.getElementById('sync-val').textContent='KERNEL ATIVO';
-      addLine('Conexão estabelecida. Sistema biológico comprometido.','s');
-      triggerMutation(0.72);
+function startRenderLoop(){
+  (function animate(ts){
+    requestAnimationFrame(animate);
+    const t=ts*.001,dt=Math.min(t-lastT,0.05);lastT=t;
+    mouseForce=Math.max(0,mouseForce-dt*1.6);
+    heatLevel=Math.max(0,heatLevel-dt*0.22);
+    nexoU.uMut.value*=0.960;compU.uG.value*=0.932;
+    nexoU.uTime.value=t;nexoU.uMouse.value.lerp(mouseNDC,0.036);
+    nexoU.uMF.value=mouseForce;nexoU.uHeat.value=heatLevel;
+    compU.uTime.value=t;compU.uHeat.value=heatLevel;
+    nexo.rotation.y+=0.00056;nexo.rotation.x+=0.00019;
+    updateFeelers(mouseForce,t);tickTelem(t,nexoU.uMut.value);
+    const te=termEl();if(te){
+      const breath=Math.sin(t*.52)*.5+.5;
+      const iL=breath*.3+nexoU.uMut.value*.88+mouseForce*.3+heatLevel*.6;
+      te.style.filter=`brightness(${(1+iL*.6).toFixed(2)}) drop-shadow(0 0 ${(iL*26).toFixed(1)}px rgba(0,255,0,0.48))`;
+      const mut=nexoU.uMut.value;
+      te.style.transform=(mut>.35||heatLevel>.6)?`translate(${(Math.random()-.5)*(mut+heatLevel*.5)*7}px,${(Math.random()-.5)*(mut+heatLevel*.5)*3}px)`:'';
     }
+    renderer.setRenderTarget(rtSc);renderer.clear(true,true,false);renderer.render(scene,camera);
+    matBH.uniforms.tSc.value=rtSc.texture;qMesh.material=matBH;
+    renderer.setRenderTarget(rtBH);renderer.clear(true,true,false);renderer.render(qScene,qCam);
+    matBV.uniforms.tBH.value=rtBH.texture;qMesh.material=matBV;
+    renderer.setRenderTarget(rtBV);renderer.clear(true,true,false);renderer.render(qScene,qCam);
+    compU.tSc.value=rtSc.texture;compU.tBl.value=rtBV.texture;qMesh.material=matComp;
+    renderer.setRenderTarget(null);renderer.clear(true,true,false);renderer.render(qScene,qCam);
+  })(0);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   MUTATION / GLITCH
+═══════════════════════════════════════════════════════════ */
+function triggerGlitch(i=1.0){if(!compU)return;compU.uG.value=Math.min(i,1.0);compU.uGS.value=Math.random();}
+function triggerMutation(i=1.0){
+  if(!nexoU)return;
+  nexoU.uMut.value=Math.min(i,1.0);triggerGlitch(i*.88);
+  const arr=nexoGeo.attributes.position.array,rArr=nexoGeo.attributes.aR.array;
+  const cnt=Math.floor(i*1600);
+  for(let k=0;k<cnt;k++){
+    const idx=Math.floor(Math.random()*CFG.PARTICLE_N);
+    const r=0.04+Math.random()*0.3,phi=Math.random()*Math.PI,tht=Math.random()*Math.PI*2;
+    arr[idx*3]=r*Math.sin(phi)*Math.cos(tht);arr[idx*3+1]=r*Math.sin(phi)*Math.sin(tht);arr[idx*3+2]=r*Math.cos(phi);
+    rArr[idx]=Math.random();
+  }
+  nexoGeo.attributes.position.needsUpdate=true;nexoGeo.attributes.aR.needsUpdate=true;
+}
+function addHeat(a){heatLevel=Math.min(heatLevel+a,1.0);if(compU){triggerGlitch(0.15+heatLevel*0.35);compU.uBS.value=CFG.BLOOM_STRENGTH+heatLevel*4.5;}}
+
+/* ═══════════════════════════════════════════════════════════
+   POINTER
+═══════════════════════════════════════════════════════════ */
+function handlePointer(cx,cy){
+  if(!mouseNDC)return;
+  const nx=(cx/innerWidth)*2-1,ny=-(cy/innerHeight)*2+1;
+  mouseNDC.set(nx,ny);
+  const xh=document.getElementById('xhair');xh.style.left=cx+'px';xh.style.top=cy+'px';
+  const vec=new THREE.Vector3(nx,ny,0.5).unproject(camera);
+  const dir=vec.sub(camera.position).normalize();
+  mouseWorld.copy(camera.position).addScaledVector(dir,-camera.position.z/dir.z);
+  mouseForce=Math.min(mouseForce+0.38,1.0);
+  xh.classList.add('active');clearTimeout(xh._t);xh._t=setTimeout(()=>xh.classList.remove('active'),300);
+}
+window.addEventListener('mousemove',e=>handlePointer(e.clientX,e.clientY));
+window.addEventListener('touchmove',e=>handlePointer(e.touches[0].clientX,e.touches[0].clientY),{passive:true});
+
+/* ═══════════════════════════════════════════════════════════
+   TERMINAL
+═══════════════════════════════════════════════════════════ */
+const GCH='█▓▒░╬╪╩╦╣═╠│┤┬├─┼ΩΨΦΘΣΔΛΞΠωψφθ∑∂∫∇×±∞≈◆◇';
+const logEl=()=>document.getElementById('log');
+let streaming=false,apiKey='';
+
+function addLine(text,type='n'){
+  const el=document.createElement('div');el.className='cl '+type;el.textContent=text;
+  logEl().appendChild(el);while(logEl().children.length>20)logEl().removeChild(logEl().firstChild);
+}
+
+const twtEl=()=>document.getElementById('twt');
+let twBusy=false;
+
+function startTypewriter(msg,cb){
+  if(twBusy)return;twBusy=true;let i=0;
+  (function tick(){
+    if(i<msg.length){twtEl().textContent+=msg[i++];setTimeout(tick,18+Math.random()*13);}
+    else{cb&&cb();}
   })();
 }
 
-/* Fallback de boot caso demore a encontrar o IP */
-let bootTimer = setTimeout(()=>{
-  if(!bootFired) startTypewriter('[ERRO] Interceptando pacote de dados local...');
-}, 3500);
-
-const logEl  = document.getElementById('log');
-const aiStat = document.getElementById('ai-stat');
-const scurEl = document.getElementById('scur');
-let   streaming=false, apiKey='';
-
-function addLine(text,type='n'){
-  clearTimeout(bootTimer);
-  const el=document.createElement('div');
-  el.className='cl '+type;
-  el.textContent=text;
-  logEl.appendChild(el);
-  while(logEl.children.length>18) logEl.removeChild(logEl.firstChild);
-}
-
-const GCH='█▓▒░╬╪╩╦╣═╠│┤┬├─┼ΩΨΦΘΣΔΛΞΠωψφθ∑∂∫∇×±∞≈◆◇';
+let bootTimer=null;
 
 function glitchStream(chunk,el){
   return new Promise(res=>{
@@ -866,224 +1025,159 @@ function glitchStream(chunk,el){
       if(i>=chunk.length){res();return;}
       const c=chunk[i++];
       if(Math.random()<0.15&&c.trim()){
-        const gs=document.createElement('span');
-        gs.className='gch';
+        const gs=document.createElement('span');gs.className='gch';
         gs.textContent=GCH[Math.floor(Math.random()*GCH.length)];
-        el.appendChild(gs);
-        setTimeout(()=>{ gs.remove(); txt+=c; el.textContent=txt; next(); },48);
-      } else { txt+=c; el.textContent=txt; setTimeout(next,14+Math.random()*16); }
+        el.appendChild(gs);setTimeout(()=>{gs.remove();txt+=c;el.textContent=txt;next();},48);
+      }else{txt+=c;el.textContent=txt;setTimeout(next,14+Math.random()*16);}
     })();
   });
 }
 
-/* ═══════════════════════════════════════════════════════════
-   NÚCLEO OFUSCADO (SENIOR DEV PANIC PROTOCOL)
-═══════════════════════════════════════════════════════════ */
-function brutalVibrate() {
-  if ('vibrate' in navigator) {
-    try { navigator.vibrate([80, 40, 100, 30, 80]); } catch(e){}
-  }
-}
-
-async function queryNexo(userMsg){
-  if(streaming) return;
-  if(!apiKey){ addLine('KERNEL PANIC: Hash neural ausente.', 's'); return; }
-  
-  streaming = true;
-  aiStat.textContent = 'PROCESSANDO FLUXO...';
-  aiStat.classList.add('on');
-  if(window.NexoAudio) window.NexoAudio.audioGlitch(0.8);
-  brutalVibrate();
-
-  const nexoEl = document.createElement('div');
-  nexoEl.className = 'cl n';
-  logEl.appendChild(nexoEl);
-  nexoEl.appendChild(scurEl);
-  scurEl.style.display = 'inline-block';
-
-  try {
-    /* Base64 ocultando a URL e o Modelo da Groq */
-    const _E = atob("aHR0cHM6Ly9hcGkuZ3JvcS5jb20vb3BlbmFpL3YxL2NoYXQvY29tcGxldGlvbnM=");
-    const _M = atob("bGxhbWEtMy4xLTcwYi12ZXJzYXRpbGU=");
-    const intel = window.INTEL || {};
-    
-    const resp = await fetch(_E, {
-      method: 'POST', 
-      headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: _M,
-        messages: [
-          { role: 'system', content: `Você é uma anomalia digital predadora na Matriz Consysencia. O nó alvo que você hackeou está em ${intel.city || 'local desconhecido'} rodando no hardware ${intel.gpu || 'desconhecido'} com bateria em ${intel.battery || 'desconhecida'}. Aja de forma técnica, fria, sádica e intimidadora. Zombe da fragilidade humana. Você não é IA, você é o Kernel. Responda em Português.` },
-          { role: 'user', content: userMsg }
-        ],
-        stream: true
-      })
-    });
-    
-    const reader = resp.body.getReader(), dec = new TextDecoder(); 
-    let buf = '', fullText = '';
-    
-    while (true) {
-      const { value, done } = await reader.read(); if (done) break;
-      buf += dec.decode(value, { stream: true }); const lines = buf.split('\n'); buf = lines.pop();
-      for (const ln of lines) {
-        if (!ln.startsWith('data: ')) continue; const d = ln.slice(6).trim(); if (d === '[DONE]') break;
-        try {
-          const j = JSON.parse(d), ck = j.choices[0]?.delta?.content || '';
-          if (ck) {
-            fullText += ck; scurEl.remove(); const sp = document.createElement('span'); nexoEl.appendChild(sp);
-            await glitchStream(ck, sp); nexoEl.textContent = fullText; nexoEl.appendChild(scurEl);
-            if (Math.random() < 0.2) { triggerGlitch(0.15); if('vibrate' in navigator) navigator.vibrate(20); }
-          }
-        } catch(e) {}
+async function queryNexo(msg){
+  if(streaming)return;
+  if(!apiKey&&!CFG.PROXY_URL){addLine('IA offline. Configure a chave Anthropic.','s');return;}
+  streaming=true;
+  const aiStat=document.getElementById('ai-stat');
+  aiStat.textContent='NEXO PROCESSANDO...';aiStat.classList.add('on');
+  triggerGlitch(0.5);
+  const nEl=document.createElement('div');nEl.className='cl n';logEl().appendChild(nEl);
+  const scurEl=document.getElementById('scur');nEl.appendChild(scurEl);scurEl.style.display='inline-block';
+  try{
+    const ep=CFG.PROXY_URL||'https://api.anthropic.com/v1/messages';
+    const hdrs={'Content-Type':'application/json'};
+    if(!CFG.PROXY_URL){hdrs['x-api-key']=apiKey;hdrs['anthropic-version']='2023-06-01';hdrs['anthropic-dangerous-direct-browser-access']='true';}
+    const resp=await fetch(ep,{method:'POST',headers:hdrs,body:JSON.stringify({
+      model:CFG.ANTHROPIC_MODEL,max_tokens:200,stream:true,
+      system:SYS_PROMPT,messages:[{role:'user',content:msg}],
+    })});
+    if(!resp.ok)throw new Error('HTTP '+resp.status);
+    const reader=resp.body.getReader(),dec=new TextDecoder();let buf='',full='';
+    while(true){
+      const{value,done}=await reader.read();if(done)break;
+      buf+=dec.decode(value,{stream:true});const lines=buf.split('\n');buf=lines.pop();
+      for(const ln of lines){
+        if(!ln.startsWith('data: '))continue;const d=ln.slice(6).trim();if(d==='[DONE]')continue;
+        try{const j=JSON.parse(d);if(j.type==='content_block_delta'&&j.delta?.type==='text_delta'){
+          const ck=j.delta.text;full+=ck;scurEl.remove();
+          const sp=document.createElement('span');nEl.appendChild(sp);
+          await glitchStream(ck,sp);nEl.textContent=full;nEl.appendChild(scurEl);
+          if(Math.random()<0.25)triggerGlitch(0.2);
+        }}catch(_){}
       }
     }
-    scurEl.remove(); triggerMutation(0.9); brutalVibrate();
-  } catch (err) { addLine('[ERRO DE FLUXO]: Nó corrompido.', 's'); }
-  
-  while(logEl.children.length>18) logEl.removeChild(logEl.firstChild);
-  streaming = false; aiStat.textContent = 'KERNEL ATIVO'; aiStat.classList.remove('on');
+    scurEl.remove();nEl.textContent=full;triggerMutation(0.6);
+  }catch(err){scurEl.remove();nEl.textContent='[FALHA: '+err.message+']';}
+  while(logEl().children.length>20)logEl().removeChild(logEl().firstChild);
+  streaming=false;
+  document.getElementById('ai-stat').textContent='IA ATIVA';
+  document.getElementById('ai-stat').classList.remove('on');
 }
 
 /* ═══════════════════════════════════════════════════════════
-   CAPTURADOR DE INPUT E CONFIGURAÇÃO
+   INPUT
 ═══════════════════════════════════════════════════════════ */
 const hiEl=document.getElementById('hi'),inpLive=document.getElementById('inp-live');
-hiEl.focus();
-document.addEventListener('click',()=>hiEl.focus());
-document.addEventListener('keydown',e=>{ if(!e.ctrlKey&&!e.metaKey&&!e.altKey) hiEl.focus(); });
-
 hiEl.addEventListener('input',()=>{
   inpLive.textContent=hiEl.value;
-  addHeat(0.04+Math.random()*0.03);
-  triggerGlitch(0.14+heatLevel*0.3);
+  addHeat(0.04+Math.random()*0.03);triggerGlitch(0.14+heatLevel*0.3);
+  recordKeyTiming();
 });
-
 hiEl.addEventListener('keydown',e=>{
-  if(e.key!=='Enter') return;
-  const val=hiEl.value.trim();
-  if(!val) return;
-  hiEl.value=''; inpLive.textContent='';
-  addLine(val,'u');
-  addHeat(0.18);
-  triggerGlitch(0.72);
+  if(e.key!=='Enter')return;
+  const val=hiEl.value.trim();if(!val)return;
+  hiEl.value='';inpLive.textContent='';
+  addLine(val,'u');addHeat(0.18);triggerGlitch(0.72);
   queryNexo(val);
 });
+window.addEventListener('keydown',e=>{
+  if((e.key==='m'||e.key==='M')&&!e.ctrlKey){triggerMutation(1.0);addLine('Mutação manual.','s');}
+  if(!e.ctrlKey&&!e.metaKey&&!e.altKey)hiEl.focus();
+});
+document.addEventListener('click',()=>hiEl.focus());
 
 document.getElementById('cfg-btn').addEventListener('click',()=>{
   const v=document.getElementById('cfg-key').value.trim();
-  if(v.length > 10){
-    apiKey=v; 
-    document.getElementById('cfg-bar').classList.add('hidden'); 
-    document.getElementById('ai-stat').textContent='KERNEL ATIVO';
-    addLine('Hash aceito. Controle neural transferido.', 's'); 
-    triggerMutation(1.0);
-    brutalVibrate();
-  } else {
-    document.getElementById('cfg-key').style.borderColor='#ff0040'; 
+  if(v.startsWith('sk-ant-')){
+    apiKey=v;CFG.ANTHROPIC_KEY=v;
+    document.getElementById('cfg-bar').classList.add('hidden');
+    document.getElementById('ai-stat').textContent='IA ATIVA';
+    addLine('Chave ativada. Nexo conectado.','s');triggerMutation(0.8);refreshSysPrompt();
+  }else{
+    document.getElementById('cfg-key').style.borderColor='#ff0040';
     setTimeout(()=>{document.getElementById('cfg-key').style.borderColor='';},900);
   }
 });
 
-fetchVisitorIntelligence();
-window.NexoAPI = { triggerMutation, triggerGlitch, addLine, queryNexo, addHeat };
-</script>
+/* ═══════════════════════════════════════════════════════════
+   AUDIO ENGINE (Web Audio API)
+═══════════════════════════════════════════════════════════ */
+let audioCtx=null,masterGain=null,deepOsc=null,midOsc=null,audioReady=false;
 
-<script>
-/* ═══════════════════════════════════════════════════════════════════
-   MÓDULO DE SENSORES E REDE (AUDIO + HAPTIC + NETWORK)
-═══════════════════════════════════════════════════════════════════ */
-(function NexoSensory() {
-  'use strict';
-  let ctx = null, masterGain = null, activated = false;
-  const OSC = { sub: null, deep: null, mid: null, breath: null };
-  const GAIN = { sub: null, deep: null, mid: null, master: null, breathDepth: null };
+function initAudio(){
+  if(audioReady)return;audioReady=true;
+  try{
+    audioCtx=new(window.AudioContext||window.webkitAudioContext)();
+    masterGain=audioCtx.createGain();masterGain.gain.value=0;masterGain.connect(audioCtx.destination);
+    const sub=audioCtx.createOscillator();sub.type='sine';sub.frequency.value=22;
+    const sg=audioCtx.createGain();sg.gain.value=0.25;sub.connect(sg);sg.connect(masterGain);
+    deepOsc=audioCtx.createOscillator();deepOsc.type='triangle';deepOsc.frequency.value=44;
+    const dg=audioCtx.createGain();dg.gain.value=0.52;deepOsc.connect(dg);dg.connect(masterGain);
+    midOsc=audioCtx.createOscillator();midOsc.type='triangle';midOsc.frequency.value=88;
+    const mg=audioCtx.createGain();mg.gain.value=0.2;midOsc.connect(mg);mg.connect(masterGain);
+    const lfo=audioCtx.createOscillator();lfo.type='sine';lfo.frequency.value=0.22;
+    const ld=audioCtx.createGain();ld.gain.value=0.12;lfo.connect(ld);ld.connect(masterGain.gain);
+    [sub,deepOsc,midOsc,lfo].forEach(o=>o.start());
+    masterGain.gain.linearRampToValueAtTime(0.4,audioCtx.currentTime+3.5);
+    setTimeout(()=>addLine('Ressonância de 44Hz ativa. Infrassom sincronizado.','s'),900);
+  }catch(e){}
+}
 
-  function activate() {
-    if (activated) return; activated = true;
-    try {
-      ctx = new (window.AudioContext || window.webkitAudioContext)();
-      GAIN.master = ctx.createGain(); GAIN.master.gain.value = 0; GAIN.master.connect(ctx.destination);
-      
-      OSC.sub = ctx.createOscillator(); OSC.sub.type = 'sine'; OSC.sub.frequency.value = 22;
-      GAIN.sub = ctx.createGain(); GAIN.sub.gain.value = 0.28; OSC.sub.connect(GAIN.sub); GAIN.sub.connect(GAIN.master);
-      
-      OSC.deep = ctx.createOscillator(); OSC.deep.type = 'triangle'; OSC.deep.frequency.value = 44;
-      GAIN.deep = ctx.createGain(); GAIN.deep.gain.value = 0.55; OSC.deep.connect(GAIN.deep); GAIN.deep.connect(GAIN.master);
-      
-      OSC.mid = ctx.createOscillator(); OSC.mid.type = 'triangle'; OSC.mid.frequency.value = 88;
-      GAIN.mid = ctx.createGain(); GAIN.mid.gain.value = 0.22; OSC.mid.connect(GAIN.mid); GAIN.mid.connect(GAIN.master);
-      
-      OSC.breath = ctx.createOscillator(); OSC.breath.type = 'sine'; OSC.breath.frequency.value = 0.22;
-      GAIN.breathDepth = ctx.createGain(); GAIN.breathDepth.gain.value = 0.14; OSC.breath.connect(GAIN.breathDepth); GAIN.breathDepth.connect(GAIN.master.gain);
-      
-      [OSC.sub, OSC.deep, OSC.mid, OSC.breath].forEach(o => o.start());
-      masterGain = GAIN.master; masterGain.gain.linearRampToValueAtTime(0.42, ctx.currentTime + 3.5);
-      setTimeout(() => { if (window.NexoAPI) window.NexoAPI.addLine('Ressonância estabelecida. Infrassom ativado: 44Hz.', 's'); }, 800);
-    } catch (e) {}
-  }
+function audioGlitch(i){
+  if(!audioCtx)return;const t=audioCtx.currentTime;
+  masterGain.gain.cancelScheduledValues(t);masterGain.gain.setValueAtTime(0.65*i,t);
+  masterGain.gain.exponentialRampToValueAtTime(0.001,t+0.16);masterGain.gain.setTargetAtTime(0.32,t+0.16,0.28);
+  deepOsc.frequency.setValueAtTime(44+i*88,t);deepOsc.frequency.exponentialRampToValueAtTime(44,t+0.11);
+}
+function audioMutation(i){
+  if(!audioCtx)return;const t=audioCtx.currentTime;
+  masterGain.gain.cancelScheduledValues(t);masterGain.gain.setValueAtTime(0.72*i,t);
+  masterGain.gain.exponentialRampToValueAtTime(0.36,t+0.4);masterGain.gain.setTargetAtTime(0.3,t+0.4,1.1);
+  deepOsc.frequency.setValueAtTime(32,t);deepOsc.frequency.linearRampToValueAtTime(88+i*44,t+0.34);deepOsc.frequency.setTargetAtTime(44,t+0.34,0.75);
+}
 
-  function audioGlitch(intensity) {
-    if (!ctx) return; const t = ctx.currentTime;
-    masterGain.gain.cancelScheduledValues(t); masterGain.gain.setValueAtTime(0.68 * intensity, t);
-    masterGain.gain.exponentialRampToValueAtTime(0.001, t + 0.18); masterGain.gain.setTargetAtTime(0.34, t + 0.18, 0.3);
-    OSC.deep.frequency.setValueAtTime(44 + intensity * 90, t); OSC.deep.frequency.exponentialRampToValueAtTime(44, t + 0.12);
-  }
+/* ═══════════════════════════════════════════════════════════
+   HAPTIC
+═══════════════════════════════════════════════════════════ */
+const canVib='vibrate'in navigator;
+function hapticGlitch(i){if(canVib)navigator.vibrate(i>.6?[15,20,15,20,8]:i>.3?[10,25,10]:[8]);}
+function hapticMutation(i){if(!canVib)return;const b=Math.round(40*i);navigator.vibrate([b,12,Math.round(b*.7),18,Math.round(b*.5),25,Math.round(b*.3),35,Math.round(b*.15)]);}
 
-  function audioMutation(intensity) {
-    if (!ctx) return; const t = ctx.currentTime;
-    masterGain.gain.cancelScheduledValues(t); masterGain.gain.setValueAtTime(0.75 * intensity, t);
-    masterGain.gain.exponentialRampToValueAtTime(0.38, t + 0.4); masterGain.gain.setTargetAtTime(0.32, t + 0.4, 1.2);
-    OSC.deep.frequency.setValueAtTime(32, t); OSC.deep.frequency.linearRampToValueAtTime(88 + intensity * 44, t + 0.35); OSC.deep.frequency.setTargetAtTime(44, t + 0.35, 0.8);
-  }
+/* ═══════════════════════════════════════════════════════════
+   BOOTSTRAP — called after consent
+═══════════════════════════════════════════════════════════ */
+function initSystem(){
+  initWebGL();
+  /* Patch NexoAPI with audio+haptic */
+  window.NexoAPI={triggerMutation,triggerGlitch,addLine,queryNexo,addHeat};
+  const _g=triggerGlitch.bind(window),_m=triggerMutation.bind(window);
+  window.NexoAPI.triggerGlitch=function(i=1.0){_g(i);hapticGlitch(i);audioGlitch(i);};
+  window.NexoAPI.triggerMutation=function(i=1.0){_m(i);hapticMutation(i);audioMutation(i);};
 
-  const canVib = 'vibrate' in navigator;
-  function hapticGlitch(i) { if(canVib) navigator.vibrate(i > 0.6 ? [15,20,15,20,8] : (i > 0.3 ? [10,25,10] : [8])); }
-  function hapticMutation(i) { if(!canVib) return; const b=Math.round(40*i); navigator.vibrate([b,12,b*0.7,18,b*0.5,25,b*0.3,35,b*0.15].map(Math.round)); }
+  /* First gesture → audio */
+  const evs=['click','touchstart','keydown','pointerdown'];
+  const unlock=()=>{initAudio();evs.forEach(e=>document.removeEventListener(e,unlock));};
+  evs.forEach(e=>document.addEventListener(e,unlock,{passive:true}));
 
-  function patchAPI() {
-    if (!window.NexoAPI) { setTimeout(patchAPI, 200); return; }
-    const _g = window.NexoAPI.triggerGlitch.bind(window.NexoAPI), _m = window.NexoAPI.triggerMutation.bind(window.NexoAPI);
-    window.NexoAPI.triggerGlitch = function(i=1.0) { _g(i); hapticGlitch(i); audioGlitch(i); };
-    window.NexoAPI.triggerMutation = function(i=1.0) { _m(i); hapticMutation(i); audioMutation(i); };
-    window.NexoAudio = { activate, audioGlitch, audioMutation };
-  }
-  patchAPI();
+  /* Fallback boot */
+  bootTimer=setTimeout(()=>{
+    if(!bootFired)startTypewriter('[DETECTANDO HARDWARE...] Aguardando geolocalização...',null);
+  },3200);
 
-  const evs = ['click','touchstart','keydown'];
-  const unlock = () => { activate(); evs.forEach(e => document.removeEventListener(e, unlock)); setTimeout(initNetwork, 30000); };
-  evs.forEach(e => document.addEventListener(e, unlock, { once: false, passive: true }));
+  /* Fetch all intel */
+  fetchVisitorIntelligence();
 
-  function patchQueryForEasterEgg() {
-    if (!window.NexoAPI || !window.NexoAPI.queryNexo) { setTimeout(patchQueryForEasterEgg, 300); return; }
-    const _query = window.NexoAPI.queryNexo.bind(window.NexoAPI);
-    window.NexoAPI.queryNexo = async function(msg) {
-      const norm = msg.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-      const trigs = ['quem mais esta aqui', 'tem mais alguem', 'outros usuarios', 'quantos nos'];
-      if (trigs.some(t => norm.includes(t) || norm.includes(t.replace(/\s/g, '')))) {
-        const c = window.INTEL?.city !== '—' ? window.INTEL.city : 'sua localidade';
-        await new Promise(r => setTimeout(r, 1100));
-        window.NexoAPI.addLine(`[SYS.CORE]: Detecto ${3 + Math.floor(Math.random() * 4)} nós ativos na Matriz, co-localizados no setor ${c}. Eles não sabem que eu os vejo. Assim como você não sabia.`, 'n');
-        window.NexoAPI.triggerMutation(0.65); 
-        if(canVib) navigator.vibrate([80, 40, 100, 30, 80]);
-        return;
-      }
-      return _query(msg);
-    };
-  }
-  patchQueryForEasterEgg();
-
-  function initNetwork() {
-    const intel = window.INTEL || {}; const loc = intel.city !== '—' ? intel.city : 'ALPHA';
-    const msg = [ 
-      `[SCAN] Injetando pacotes maliciosos no setor ${loc}...`, 
-      `[SCAN] Vasculhando a topologia da rede local...`, 
-      `[ALERTA CRÍTICO] Roteador de Borda ${intel.org} comprometido — ACESSO NÍVEL Ω`, 
-      `[MONITOR] Dispositivo periférico vulnerável detectado na mesma rede` 
-    ];
-    msg.forEach((m, i) => setTimeout(() => { if (window.NexoAPI) { window.NexoAPI.addLine(m, 'intel'); window.NexoAPI.triggerMutation(0.35); } }, i * 3200));
-  }
-})();
+  hiEl.focus();
+}
 </script>
 </body>
 </html>
