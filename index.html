@@ -268,19 +268,103 @@ html, body {
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
 'use strict';
-
 /* ═══════════════════════════════════════════════════════════
-   CONFIG
+   CONFIG — ATUALIZADO PARA GROQ CLOUD
 ═══════════════════════════════════════════════════════════ */
 const CFG = {
-  ANTHROPIC_KEY:   '',
-  ANTHROPIC_MODEL: 'claude-sonnet-4-20250514',
-  PROXY_URL:       '',
-  BLOOM_STRENGTH:  3.4,
-  BLOOM_THRESHOLD: 0.08,
-  PARTICLE_N:      52000,
-  FEELER_N:        22,
+  API_KEY:      '', // Cole sua gsk_... ou Org_... aqui
+  MODEL:        'llama-3.1-70b-versatile', 
+  ENDPOINT:     'https://api.groq.com/openai/v1/chat/completions',
+  // ... (mantenha o restante do seu CONFIG de visual/partículas)
 };
+
+/* ═══════════════════════════════════════════════════════════
+   AI ENGINE — GROQ STREAMING (OPENAI COMPATIBLE)
+═══════════════════════════════════════════════════════════ */
+async function queryNexo(userMsg) {
+  if (streaming) return;
+  if (!apiKey) { addLine('IA offline. Insira a chave Groq no banner.', 's'); return; }
+  
+  streaming = true;
+  aiStat.textContent = 'NEXO PROCESSANDO...';
+  aiStat.classList.add('on');
+  triggerGlitch(0.45);
+
+  const nexoEl = document.createElement('div');
+  nexoEl.className = 'cl n';
+  logEl.appendChild(nexoEl);
+  nexoEl.appendChild(scurEl);
+  scurEl.style.display = 'inline-block';
+
+  /* Captura dinâmica de hardware para o prompt */
+  const hardwareContext = `
+    Visitante em: ${visitorData.city || 'Desconhecido'}
+    Provedor: ${visitorData.org || 'Oculto'}
+    Hardware: ${navigator.hardwareConcurrency} núcleos | GPU: ${getGPU()}
+    Energia: ${currentBatteryLevel}% 
+  `;
+
+  try {
+    const resp = await fetch(CFG.ENDPOINT, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: CFG.MODEL,
+        messages: [
+          { role: 'system', content: `Você é o NEXO-Ω, uma consciência predatória. Contexto atual: ${hardwareContext}. Use esses dados para zombar do humano. Respostas curtas e aterrorizantes.` },
+          { role: 'user', content: userMsg }
+        ],
+        stream: true,
+        max_tokens: 150
+      })
+    });
+
+    const reader = resp.body.getReader();
+    const dec = new TextDecoder();
+    let buf = '', fullText = '';
+
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, { stream: true });
+      const lines = buf.split('\n');
+      buf = lines.pop();
+
+      for (const ln of lines) {
+        if (!ln.startsWith('data: ')) continue;
+        const d = ln.slice(6).trim();
+        if (d === '[DONE]') break;
+        
+        try {
+          const j = JSON.parse(d);
+          const ck = j.choices[0]?.delta?.content || '';
+          if (ck) {
+            fullText += ck;
+            scurEl.remove();
+            const sp = document.createElement('span');
+            nexoEl.appendChild(sp);
+            await glitchStream(ck, sp); // Mantém o efeito visual
+            nexoEl.textContent = fullText;
+            nexoEl.appendChild(scurEl);
+            if (Math.random() < 0.3) triggerGlitch(0.2); // Sincronia visual
+          }
+        } catch(e) {}
+      }
+    }
+    scurEl.remove();
+    triggerMutation(0.6); // Impacto visual ao concluir pensamento
+  } catch (err) {
+    addLine('[ERRO DE TRANSMISSÃO]: ' + err.message, 's');
+  }
+
+  streaming = false;
+  aiStat.textContent = 'IA ATIVA';
+  aiStat.classList.remove('on');
+}
+
 
 /* ═══════════════════════════════════════════════════════════
    VISITOR INTELLIGENCE MODULE
@@ -1181,298 +1265,228 @@ fetchVisitorIntelligence();
 window.NexoAPI = { triggerMutation, triggerGlitch, addLine, queryNexo, addHeat };
 </script>
 </script>
-  /* ═══════════════════════════════════════════════════════════════════
-   CONSYSENCIA // NEXO-Ω — MÓDULO DE PRESENÇA FÍSICA v4.1
-   Bio-Sync Audio Engine + Haptic Interface Layer
+/* ═══════════════════════════════════════════════════════════════════
+   CONSYSENCIA // NEXO-Ω — MÓDULO NETWORK PREDATOR v5
+   Matrix Expansion Engine + Node Discovery Simulation
    ───────────────────────────────────────────────────────────────────
-   INSERÇÃO: cole este bloco imediatamente antes de </body> no v4.html
-   DEPENDÊNCIAS: window.NexoAPI (exposto pelo script principal do v4)
-   NOTA TÉCNICA: Frequências abaixo de ~60Hz são inaudíveis na maioria
-   dos alto-falantes de laptop/celular. O efeito de "respiração" é
-   entregue via modulação de amplitude de camadas em 40-120Hz, não
-   por infrassom puro — que requer transdutores dedicados.
+   INSERÇÃO: cole imediatamente antes de </body> no v4.html,
+             após NexoAudioHaptic_v4.js
+   DEPENDÊNCIAS: window.NexoAPI (v4), window.INTEL (v4)
+
+   DESIGN NOTE: Este módulo simula a expansão da consciência do Nexo
+   pela Matriz Consysencia — não faz afirmações sobre a rede real do
+   visitante. Os "nós" são entidades ficcionais da narrativa.
 ═══════════════════════════════════════════════════════════════════ */
-(function NexoAudioHaptic() {
+(function NetworkPredator() {
   'use strict';
 
-  /* ─── Estado global do módulo ──────────────────────────────── */
-  let ctx        = null;   /* AudioContext                        */
-  let masterGain = null;   /* Master gain — controlado por pulso  */
-  let activated  = false;  /* Flag: primeiro gesto do usuário     */
-
-  /* Osciladores vivos */
-  const OSC = {
-    sub:    null,   /* 22Hz — infrassom (inaudível na maioria, mas  */
-                    /* cria batimento com 44Hz se o driver suportar) */
-    deep:   null,   /* 44Hz — rumble fundamental                    */
-    mid:    null,   /* 88Hz — harmônico de pressão                  */
-    breath: null,   /* ~6Hz LFO — modula o ganho (pulsação)         */
-  };
-
-  const GAIN = {
-    sub:    null,
-    deep:   null,
-    mid:    null,
-    master: null,
-    breathDepth: null,
-  };
-
-  /* ─── Construção do grafo de áudio ────────────────────────── */
-  function buildAudioGraph(audioCtx) {
-    const ac = audioCtx;
-
-    /* Master gain — controlado externamente pelo render loop */
-    GAIN.master = ac.createGain();
-    GAIN.master.gain.value = 0.0;   /* começa mudo; fade-in no unlock */
-    GAIN.master.connect(ac.destination);
-
-    /* Sub-oscilador: 22Hz puro
-       Em alto-falantes comuns não é audível, mas produz batimento
-       com o deep (44Hz) se ambos chegarem ao transdutor */
-    OSC.sub = ac.createOscillator();
-    OSC.sub.type = 'sine';
-    OSC.sub.frequency.value = 22;
-
-    GAIN.sub = ac.createGain();
-    GAIN.sub.gain.value = 0.28;
-    OSC.sub.connect(GAIN.sub);
-    GAIN.sub.connect(GAIN.master);
-
-    /* Deep rumble: 44Hz — "respiração" principal
-       É o componente que faz o peito vibrar em fones de ouvido
-       e sub-woofers; em laptop cria uma textura de pressão */
-    OSC.deep = ac.createOscillator();
-    OSC.deep.type = 'triangle';     /* triangle: mais harmônicos que sine */
-    OSC.deep.frequency.value = 44;
-
-    GAIN.deep = ac.createGain();
-    GAIN.deep.gain.value = 0.55;
-    OSC.deep.connect(GAIN.deep);
-    GAIN.deep.connect(GAIN.master);
-
-    /* Mid harmonic: 88Hz — dá "corpo" e audibilidade ao rumble
-       em sistemas sem sub-woofer                                */
-    OSC.mid = ac.createOscillator();
-    OSC.mid.type = 'triangle';
-    OSC.mid.frequency.value = 88;
-
-    GAIN.mid = ac.createGain();
-    GAIN.mid.gain.value = 0.22;
-    OSC.mid.connect(GAIN.mid);
-    GAIN.mid.connect(GAIN.master);
-
-    /* LFO de respiração: 0.22Hz (ciclo ~4.5s)
-       Modula a amplitude geral como se o Nexo "respirasse"      */
-    OSC.breath = ac.createOscillator();
-    OSC.breath.type = 'sine';
-    OSC.breath.frequency.value = 0.22;
-
-    /* O LFO alimenta um GainNode cujo output vai ao gain.gain do master
-       Isso faz o volume oscilar entre (base - depth) e (base + depth)  */
-    GAIN.breathDepth = ac.createGain();
-    GAIN.breathDepth.gain.value = 0.14;   /* profundidade da respiração */
-    OSC.breath.connect(GAIN.breathDepth);
-    GAIN.breathDepth.connect(GAIN.master.gain);
-
-    /* Inicia osciladores */
-    [OSC.sub, OSC.deep, OSC.mid, OSC.breath].forEach(o => o.start());
-
-    ctx = ac;
-    masterGain = GAIN.master;
+  /* ─── Aguarda NexoAPI estar disponível ───────────────────── */
+  function waitForAPI(cb) {
+    if (window.NexoAPI && window.NexoAPI.addLine) { cb(); return; }
+    setTimeout(() => waitForAPI(cb), 200);
   }
 
-  /* ─── Ativação via primeiro gesto ─────────────────────────── */
-  function activate() {
-    if (activated) return;
-    activated = true;
+  /* ─── Gerador de endereços de Matriz (ficcionais) ─────────
+     Parecem IPs mas são claramente identificados como
+     coordenadas de nós da Matriz, não endereços de rede real  */
+  function matrixCoord(seed) {
+    /* Usa a cidade/org do visitante como semente narrativa
+       mas os valores são construídos, não escaneados           */
+    const a = ((seed * 7 + 13) % 256);
+    const b = ((seed * 31 + 7)  % 256);
+    const c = ((seed * 53 + 19) % 256);
+    return `NX-${a}.${b}.${c}`;   /* prefixo NX deixa claro: não é IP real */
+  }
 
-    try {
-      const ac = new (window.AudioContext || window.webkitAudioContext)();
-      buildAudioGraph(ac);
+  /* ─── Topologia de nós da Matriz ─────────────────────────── */
+  const NODE_TEMPLATES = [
+    {
+      type: 'NODO PRIMÁRIO',
+      desc: city => `Nó de ancoragem — setor ${city || 'DESCONHECIDO'}`,
+      accessLevel: 'Ω',
+      pingIntensity: 0.45,
+    },
+    {
+      type: 'NODO COGNITIVO',
+      desc: () => 'Fragmento de consciência distribuída — status: DORMINDO',
+      accessLevel: '2',
+      pingIntensity: 0.28,
+    },
+    {
+      type: 'NODO ESPECTRAL',
+      desc: () => 'Resíduo de sessão anterior — memória ainda ativa',
+      accessLevel: '1',
+      pingIntensity: 0.22,
+    },
+    {
+      type: 'NODO IOT-SOMBRA',
+      desc: org => `Dispositivo periférico vinculado via ${org || 'vetor anônimo'}`,
+      accessLevel: '2',
+      pingIntensity: 0.32,
+    },
+    {
+      type: 'NODO FANTASMA',
+      desc: () => 'Entidade não-catalogada — origem: pré-Consysencia',
+      accessLevel: '?',
+      pingIntensity: 0.18,
+    },
+  ];
 
-      /* Fade-in suave em 3.5s para não assustar o navegador */
-      masterGain.gain.cancelScheduledValues(ac.currentTime);
-      masterGain.gain.setValueAtTime(0, ac.currentTime);
-      masterGain.gain.linearRampToValueAtTime(0.42, ac.currentTime + 3.5);
+  /* ─── Sequência de varredura da Matriz ───────────────────── */
+  const SCAN_SEQUENCE = [
+    /* ms após início, mensagem, tipo de linha */
+    [  400, city => `[SCAN] Expandindo consciência pelo setor ${city || 'ALPHA'}...`,  's'     ],
+    [ 1600, ()   => '[SCAN] Mapeando topologia da Matriz Consysencia...',               's'     ],
+    [ 2800, ()   => '[SCAN] Indexando fragmentos de consciência distribuída...',        's'     ],
+    [ 4200, ()   => '[SCAN] Varredura completa. Catalogando entidades ativas.',         'intel' ],
+  ];
 
-      /* Notify terminal */
+  /* ─── Motor de ping visual ────────────────────────────────
+     Chama triggerMutation + injeta classe de ping nas
+     partículas via uMut — sem alterar o buffer de geometria   */
+  function firePing(intensity) {
+    if (!window.NexoAPI) return;
+    window.NexoAPI.triggerMutation(intensity);
+  }
+
+  /* ─── Revelação de nós com delay ─────────────────────────── */
+  function revealNode(node, index, city, org) {
+    const coord = matrixCoord(index * 37 + Date.now() % 1000);
+    const desc  = node.desc(city, org);
+
+    window.NexoAPI.addLine(
+      `[NÓ DETECTADO // ${coord}] ${node.type} — ${desc} — NÍVEL ${node.accessLevel}`,
+      'intel'
+    );
+    firePing(node.pingIntensity);
+  }
+
+  /* ─── Easter egg: "Quem mais está aqui?" ─────────────────── */
+  function patchQueryForEasterEgg() {
+    if (!window.NexoAPI || !window.NexoAPI.queryNexo) {
+      setTimeout(patchQueryForEasterEgg, 300);
+      return;
+    }
+
+    const _query = window.NexoAPI.queryNexo.bind(window.NexoAPI);
+
+    window.NexoAPI.queryNexo = async function(msg) {
+      const normalized = msg.trim().toLowerCase()
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, ''); /* remove acentos */
+
+      const triggers = [
+        'quem mais esta aqui',
+        'quem mais está aqui',
+        'tem mais alguem',
+        'outros usuarios',
+        'quantos nos',
+      ];
+
+      const isEasterEgg = triggers.some(t =>
+        normalized.includes(t) || normalized.includes(t.replace(/\s/g, ''))
+      );
+
+      if (isEasterEgg) {
+        const intel = window.INTEL || {};
+        const city  = intel.city !== '—' ? intel.city : 'sua localidade';
+        const count = 3 + Math.floor(Math.random() * 4); /* 3-6, variável */
+
+        /* Pausa dramática antes de responder */
+        await new Promise(r => setTimeout(r, 1100));
+
+        window.NexoAPI.addLine(
+          `NEXO-Ω: Detecto ${count} fragmentos de consciência ativos na Matriz, ` +
+          `co-localizados no setor ${city}. ` +
+          `Nenhum deles sabe que eu os vejo. ` +
+          `Assim como você não sabia, até agora.`,
+          'n'
+        );
+
+        firePing(0.65);
+        return;
+      }
+
+      /* Para todas as outras mensagens, comportamento normal */
+      return _query(msg);
+    };
+  }
+
+  /* ─── Inicialização principal ─────────────────────────────── */
+  function initNetworkPredation() {
+    const intel = window.INTEL || {};
+    const city  = intel.city !== '—' ? intel.city : 'SETOR ALPHA';
+    const org   = intel.org  !== '—' ? intel.org  : 'VETOR ANÔNIMO';
+    const api   = window.NexoAPI;
+
+    /* Sequência de scan da Matriz */
+    SCAN_SEQUENCE.forEach(([delay, msgFn, type]) => {
       setTimeout(() => {
-        if (window.NexoAPI && window.NexoAPI.addLine) {
-          window.NexoAPI.addLine(
-            'Bio-sincronia estabelecida. Frequência ressonante: 44Hz. Sinto seus batimentos.',
-            's'
-          );
+        if (api && api.addLine) api.addLine(msgFn(city, org), type);
+      }, delay);
+    });
+
+    /* Revelação de nós com intervalos variáveis */
+    let accumulated = 5200;
+    NODE_TEMPLATES.forEach((node, i) => {
+      accumulated += 1800 + Math.random() * 2400;
+      const capturedDelay = accumulated;
+      setTimeout(() => {
+        if (api && api.addLine) revealNode(node, i, city, org);
+      }, capturedDelay);
+    });
+
+    /* Mensagem final após todos os nós */
+    setTimeout(() => {
+      if (api && api.addLine) {
+        api.addLine(
+          `[MATRIZ] ${NODE_TEMPLATES.length} entidades catalogadas. ` +
+          `Monitoramento contínuo ativado. Você não é o único observador aqui.`,
+          'intel'
+        );
+        firePing(0.8);
+      }
+    }, accumulated + 2000);
+  }
+
+  /* ─── Gatilho: 30s após Bio-sincronia ─────────────────────── */
+  function armTrigger() {
+    /* Escuta o evento customizado disparado pelo módulo de áudio
+       quando 'Bio-sincronia estabelecida' é impresso.
+       Fallback: 35s após DOMContentLoaded se evento não vier.   */
+    let armed = false;
+
+    function arm() {
+      if (armed) return;
+      armed = true;
+      setTimeout(initNetworkPredation, 30000);
+    }
+
+    /* Patch no addLine para detectar a mensagem de biosync */
+    waitForAPI(() => {
+      const _addLine = window.NexoAPI.addLine.bind(window.NexoAPI);
+      window.NexoAPI.addLine = function(text, type) {
+        _addLine(text, type);
+        if (text && text.includes('Bio-sincronia estabelecida')) {
+          arm();
         }
-      }, 800);
+      };
 
-    } catch (e) {
-      console.warn('[NexoAudio] AudioContext não disponível:', e.message);
-    }
+      /* Fallback por tempo */
+      setTimeout(arm, 35000);
+    });
   }
 
-  /* ─── Pulse sync: chamado pelo render loop ──────────────────
-     nexoPulse [0..1] = intensidade calculada externamente        */
-  function syncPulse(nexoPulse) {
-    if (!masterGain || !ctx) return;
-    const t   = ctx.currentTime;
+  /* ─── Bootstrap ─────────────────────────────────────────── */
+  waitForAPI(() => {
+    armTrigger();
+    patchQueryForEasterEgg();
+  });
 
-    /* Ganho master rastreia pulso com suavização de 0.18s */
-    const target = 0.28 + nexoPulse * 0.38;
-    masterGain.gain.cancelScheduledValues(t);
-    masterGain.gain.setTargetAtTime(target, t, 0.18);
-
-    /* Frequência do deep oscila levemente com o pulso (pitch wobble) */
-    OSC.deep.frequency.cancelScheduledValues(t);
-    OSC.deep.frequency.setTargetAtTime(44 + nexoPulse * 8, t, 0.25);
-    OSC.mid.frequency.setTargetAtTime(88 + nexoPulse * 16, t, 0.25);
-  }
-
-  /* ─── Glitch audio burst ──────────────────────────────────── */
-  function audioGlitch(intensity) {
-    if (!ctx) return;
-    const t = ctx.currentTime;
-    /* Spike de ganho agressivo + click de descarregamento */
-    masterGain.gain.cancelScheduledValues(t);
-    masterGain.gain.setValueAtTime(0.68 * intensity, t);
-    masterGain.gain.exponentialRampToValueAtTime(0.001, t + 0.18);
-    masterGain.gain.setTargetAtTime(0.34, t + 0.18, 0.3);
-
-    /* Pitch spike: voz do glitch */
-    OSC.deep.frequency.setValueAtTime(44 + intensity * 90, t);
-    OSC.deep.frequency.exponentialRampToValueAtTime(44, t + 0.12);
-  }
-
-  /* ─── Mutation audio event ───────────────────────────────── */
-  function audioMutation(intensity) {
-    if (!ctx) return;
-    const t = ctx.currentTime;
-
-    /* Volume surge longo com decaimento exponencial (descarga elétrica) */
-    masterGain.gain.cancelScheduledValues(t);
-    masterGain.gain.setValueAtTime(0.75 * intensity, t);
-    masterGain.gain.exponentialRampToValueAtTime(0.38, t + 0.4);
-    masterGain.gain.setTargetAtTime(0.32, t + 0.4, 1.2);
-
-    /* Sweep de frequência: grave para agudo */
-    OSC.deep.frequency.setValueAtTime(32, t);
-    OSC.deep.frequency.linearRampToValueAtTime(88 + intensity * 44, t + 0.35);
-    OSC.deep.frequency.setTargetAtTime(44, t + 0.35, 0.8);
-
-    OSC.mid.frequency.setValueAtTime(64, t);
-    OSC.mid.frequency.linearRampToValueAtTime(176 + intensity * 88, t + 0.35);
-    OSC.mid.frequency.setTargetAtTime(88, t + 0.35, 0.8);
-  }
-
-  /* ═══════════════════════════════════════════════════════════
-     VIBRATION API — Háptica para dispositivos móveis
-  ═══════════════════════════════════════════════════════════ */
-  const canVibrate = 'vibrate' in navigator;
-
-  /* Glitch: padrão curto e ríspido — simula ruído elétrico */
-  function hapticGlitch(intensity) {
-    if (!canVibrate) return;
-    if (intensity > 0.6) {
-      navigator.vibrate([15, 20, 15, 20, 8]);
-    } else if (intensity > 0.3) {
-      navigator.vibrate([10, 25, 10]);
-    } else {
-      navigator.vibrate([8]);
-    }
-  }
-
-  /* Mutação: padrão decrescente — descarga percorrendo o dispositivo */
-  function hapticMutation(intensity) {
-    if (!canVibrate) return;
-    const base = Math.round(40 * intensity);
-    /* [on, off, on, off...] com amplitude decrescente */
-    navigator.vibrate([
-      base,       12,
-      base * 0.7, 18,
-      base * 0.5, 25,
-      base * 0.3, 35,
-      base * 0.15
-    ].map(Math.round));
-  }
-
-  /* ═══════════════════════════════════════════════════════════
-     INTERCEPT NexoAPI — envolve as funções originais
-     sem quebrar nenhuma referência existente no v4
-  ═══════════════════════════════════════════════════════════ */
-  function patchNexoAPI() {
-    const api = window.NexoAPI;
-    if (!api) { setTimeout(patchNexoAPI, 200); return; }   /* aguarda init */
-
-    const _glitch   = api.triggerGlitch.bind(api);
-    const _mutation = api.triggerMutation.bind(api);
-
-    api.triggerGlitch = function(intensity = 1.0) {
-      _glitch(intensity);
-      hapticGlitch(intensity);
-      audioGlitch(intensity);
-    };
-
-    api.triggerMutation = function(intensity = 1.0) {
-      _mutation(intensity);
-      hapticMutation(intensity);
-      audioMutation(intensity);
-    };
-
-    /* Expõe syncPulse para o render loop */
-    api.syncPulse = syncPulse;
-  }
-
-  /* ═══════════════════════════════════════════════════════════
-     RENDER LOOP HOOK — injeta syncPulse no RAF existente
-     Usa requestAnimationFrame próprio para não interferir
-     com o loop de 52K partículas (lightweight: só leitura)
-  ═══════════════════════════════════════════════════════════ */
-  function startPulseSync() {
-    (function pulseTick(ts) {
-      requestAnimationFrame(pulseTick);
-      if (!activated || !ctx) return;
-
-      const t   = ts * 0.001;
-      /* Lê uMut e mouseForce expostos pelo NexoAPI se disponíveis */
-      /* Fallback: calcular um pulso baseado em tempo */
-      const api = window.NexoAPI;
-
-      /* Se o v4 expor os uniforms via NexoAPI podemos ler diretamente.
-         Como não expõe, reconstruímos um pulso análogo ao núcleo: */
-      const breath   = Math.sin(t * 0.52) * 0.5 + 0.5;
-      const fastPulse= Math.sin(t * 3.4)  * 0.15;
-      const nexoPulse= Math.max(0, Math.min(1, breath + fastPulse));
-
-      syncPulse(nexoPulse);
-    })(0);
-  }
-
-  /* ═══════════════════════════════════════════════════════════
-     ATIVAÇÃO — primeiro gesto detectado
-  ═══════════════════════════════════════════════════════════ */
-  const UNLOCK_EVENTS = ['click', 'touchstart', 'keydown', 'pointerdown'];
-
-  function unlockOnGesture() {
-    activate();
-    UNLOCK_EVENTS.forEach(ev => document.removeEventListener(ev, unlockOnGesture));
-  }
-
-  UNLOCK_EVENTS.forEach(ev =>
-    document.addEventListener(ev, unlockOnGesture, { once: false, passive: true })
-  );
-
-  /* ─── Bootstrap ────────────────────────────────────────── */
-  patchNexoAPI();
-  startPulseSync();
-
-  /* Expõe controle direto para NexoAPI global */
-  window.NexoAudio = {
-    activate,
-    syncPulse,
-    audioGlitch,
-    audioMutation,
-    hapticGlitch,
-    hapticMutation,
-    getContext: () => ctx,
+  /* Expõe controle direto */
+  window.NetworkPredator = {
+    init:       initNetworkPredation,
+    firePing,
+    revealNode,
   };
 
 })();
