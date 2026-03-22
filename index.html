@@ -3,201 +3,93 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>CONSYSENCIA // NEXO-Ω SENTIENT</title>
+<title>CONSYSENCIA // KERNEL PANIC</title>
 <style>
 :root {
-  --neon:     #00FF00;
-  --neon-dim: #007700;
-  --neon-mid: #00BB00;
-  --neon-hi:  #88FF88;
-  --void:     #000000;
-  --mono:     'Courier New', 'Lucida Console', monospace;
+  --neon: #00FF00; --neon-dim: #007700; --neon-mid: #00BB00; --neon-hi: #88FF88;
+  --void: #000000; --mono: 'Courier New', 'Lucida Console', monospace;
+  color-scheme: dark; /* Força o navegador a manter elementos nativos escuros */
 }
 *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
 html, body {
-  width:100%; height:100%;
-  background:var(--void);
-  overflow:hidden; cursor:none;
-  font-family:var(--mono);
+  width:100%; height:100%; 
+  background-color: var(--void) !important; /* Bloqueia telas brancas no mobile */
+  color: var(--neon); overflow:hidden; cursor:none; font-family:var(--mono);
 }
 
-/* ─── GL HOST ──────────────────────────────────────────── */
+/* ─── GL HOST E CAMADAS ────────────────────────────────── */
 #gl { position:fixed; inset:0; z-index:0; }
 #gl canvas { display:block; width:100%!important; height:100%!important; }
-
-/* ─── POST LAYERS ──────────────────────────────────────── */
 #pp-scan {
   position:fixed; inset:0; z-index:10; pointer-events:none;
-  background: repeating-linear-gradient(
-    0deg, transparent, transparent 2px,
-    rgba(0,0,0,0.17) 2px, rgba(0,0,0,0.17) 4px
-  );
+  background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.4) 2px, rgba(0,0,0,0.4) 4px);
 }
-
-/* ─── CROSSHAIR ────────────────────────────────────────── */
 #xhair {
-  position:fixed; z-index:50; pointer-events:none;
-  width:20px; height:20px; transform:translate(-50%,-50%);
-  transition:transform 0.06s ease;
+  position:fixed; z-index:50; pointer-events:none; width:20px; height:20px; transform:translate(-50%,-50%); transition:transform 0.06s ease;
 }
-#xhair::before, #xhair::after {
-  content:''; position:absolute;
-  background:var(--neon); opacity:0.55;
-  box-shadow:0 0 5px var(--neon);
-}
+#xhair::before, #xhair::after { content:''; position:absolute; background:var(--neon); opacity:0.55; box-shadow:0 0 5px var(--neon); }
 #xhair::before { width:1px; height:100%; left:50%; transform:translateX(-50%); }
-#xhair::after  { height:1px; width:100%; top:50%;  transform:translateY(-50%); }
-#xhair.active  { transform:translate(-50%,-50%) scale(1.6); opacity:0.9; }
+#xhair::after { height:1px; width:100%; top:50%; transform:translateY(-50%); }
+#xhair.active { transform:translate(-50%,-50%) scale(1.6); opacity:0.9; }
 
-/* ─── CONFIG BANNER ────────────────────────────────────── */
+/* ─── BARRA DE CONFIGURAÇÃO (Camuflada) ────────────────── */
 #cfg-bar {
-  position:fixed; top:0; left:0; right:0; z-index:100;
-  background:rgba(0,38,0,0.93);
-  border-bottom:1px solid var(--neon-dim);
-  padding:0.36rem 1.3rem;
-  font-size:0.56rem; letter-spacing:0.11em; color:var(--neon-hi);
-  display:flex; gap:0.7rem; align-items:center; flex-wrap:wrap;
+  position:fixed; top:0; left:0; right:0; z-index:100; background:rgba(0,10,0,0.95);
+  border-bottom:1px solid var(--neon-dim); padding:10px; font-size:10px; display:flex; gap:10px; align-items:center;
 }
 #cfg-bar.hidden { display:none; }
 #cfg-key {
-  flex:1; max-width:440px;
-  background:transparent; border:1px solid var(--neon-dim);
-  color:var(--neon); font-family:var(--mono);
-  font-size:0.56rem; padding:0.16rem 0.5rem; outline:none;
+  flex:1; background:transparent; border:1px solid var(--neon-dim); color:var(--neon);
+  font-family:var(--mono); font-size:12px; padding:5px; outline:none;
 }
-#cfg-key:focus { border-color:var(--neon); box-shadow:0 0 5px rgba(0,255,0,0.22); }
 .cfg-btn {
-  background:transparent; border:1px solid var(--neon-dim);
-  color:var(--neon); font-family:var(--mono);
-  font-size:0.56rem; letter-spacing:0.14em;
-  padding:0.16rem 0.7rem; cursor:pointer; pointer-events:all;
-  text-transform:uppercase;
-}
-.cfg-btn:hover { background:rgba(0,255,0,0.07); }
-
-/* ─── HUD ──────────────────────────────────────────────── */
-#hud {
-  position:fixed; inset:0; z-index:20; pointer-events:none;
-  display:flex; flex-direction:column;
-  justify-content:space-between;
-  padding:3.4rem 2rem 2rem;
-}
-#hud-top {
-  display:flex; justify-content:space-between; align-items:flex-start;
-  opacity:0; animation:fi 1.3s ease 1.4s forwards;
-}
-@keyframes fi {
-  from { opacity:0; transform:translateY(-6px); }
-  to   { opacity:1; transform:translateY(0); }
-}
-.lbl { font-size:0.47rem; letter-spacing:0.28em; color:var(--neon-dim); text-transform:uppercase; }
-.val { font-size:0.61rem; letter-spacing:0.11em; color:var(--neon); margin-top:0.14rem; }
-#sysid {
-  font-size:0.97rem; font-weight:bold; letter-spacing:0.48em; color:var(--neon);
-  text-shadow:0 0 12px var(--neon), 0 0 28px rgba(0,255,0,0.2);
+  background:#003300; border:1px solid var(--neon); color:var(--neon-hi); font-weight:bold;
+  font-family:var(--mono); font-size:12px; padding:5px 15px; cursor:pointer; pointer-events:all;
 }
 
-/* Intelligence readout panel */
-#intel-panel {
-  position:fixed; top:3.4rem; right:2rem; z-index:21; pointer-events:none;
-  text-align:right; opacity:0;
-  animation:fi 1s ease 4.5s forwards;
-}
-.ip-row { font-size:0.48rem; letter-spacing:0.16em; color:var(--neon-dim); margin-bottom:0.18rem; }
-.ip-row span { color:var(--neon-mid); }
+/* ─── HUD E TERMINAL ───────────────────────────────────── */
+#hud { position:fixed; inset:0; z-index:20; pointer-events:none; padding:60px 20px 20px; display:flex; flex-direction:column; }
+#hud-top { display:flex; justify-content:space-between; }
+.lbl { font-size:9px; letter-spacing:2px; color:var(--neon-dim); text-transform:uppercase; }
+.val { font-size:12px; letter-spacing:1px; color:var(--neon); margin-top:3px; }
+#sysid { font-size:16px; font-weight:bold; letter-spacing:3px; color:var(--neon); text-shadow:0 0 10px var(--neon); }
 
-/* ─── TERMINAL ─────────────────────────────────────────── */
 #term {
-  display:flex; flex-direction:column; gap:0.42rem;
-  will-change:transform,filter;
+  margin-top: auto; display:flex; flex-direction:column; gap:8px;
+  background: rgba(0, 5, 0, 0.85); border-left: 2px solid var(--neon-dim); padding: 15px;
+  max-height: 50vh; overflow-y: hidden; backdrop-filter: blur(2px);
 }
-#boot-line {
-  font-size:0.65rem; letter-spacing:0.09em; color:var(--neon-mid);
-  line-height:1.85; min-height:1.9rem;
-}
-.pfx { color:var(--neon-dim); }
-#boot-cur {
-  display:inline-block; width:7px; height:0.72em;
-  background:var(--neon); margin-left:2px; vertical-align:middle;
-  box-shadow:0 0 6px var(--neon);
-  animation:blink 0.86s step-end infinite;
-}
+#boot-line, .cl { font-size:12px; line-height:1.5; letter-spacing:1px; text-shadow:0 0 3px var(--neon); }
+.cl.u { color:rgba(0,255,0,0.6); } .cl.u::before { content:'>> '; color:var(--neon-dim); }
+.cl.n { color:var(--neon); } .cl.n::before { content:'[SYS.CORE]: '; color:var(--neon-dim); }
+.cl.s { color:#44ff66; font-size:10px; } .cl.s::before { content:'[KERNEL] '; }
+.cl.intel { color:#88ff88; font-size:10px; } .cl.intel::before { content:'[INTEL] '; color:var(--neon-dim); }
+#inp-live { font-size:14px; color:rgba(0,255,0,0.5); } #inp-live::before { content:'>_ '; color:var(--neon); }
+.gch { color:#fff; text-shadow:0 0 10px #fff; }
+#scur { display:none; width:6px; height:1em; background:var(--neon); vertical-align:middle; margin-left:2px; animation:blink 0.4s step-end infinite; }
 @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
-#log {
-  display:flex; flex-direction:column; gap:0.18rem;
-  max-height:280px; overflow:hidden;
-}
-.cl {
-  font-size:0.61rem; letter-spacing:0.07em; line-height:1.62;
-  opacity:0; animation:sli 0.2s ease forwards;
-}
-@keyframes sli {
-  from { opacity:0; transform:translateX(-5px); }
-  to   { opacity:1; transform:translateX(0); }
-}
-.cl.u  { color:rgba(0,255,0,0.48); }
-.cl.u::before  { content:'>> '; color:var(--neon-dim); }
-.cl.n  { color:var(--neon); }
-.cl.n::before  { content:'NEXO-Ω: '; color:var(--neon-dim); letter-spacing:0.13em; }
-.cl.s  { color:var(--neon-dim); font-size:0.52rem; letter-spacing:0.13em; }
-.cl.s::before  { content:'[SYS] '; }
-.cl.intel { color:#44ff66; font-size:0.55rem; letter-spacing:0.12em; }
-.cl.intel::before { content:'[INTEL] '; color:var(--neon-dim); }
-.gch { color:#ccffcc; text-shadow:0 0 9px var(--neon), 0 0 20px var(--neon); }
-#scur {
-  display:none; width:5px; height:0.66em;
-  background:var(--neon); vertical-align:middle; margin-left:1px;
-  box-shadow:0 0 5px var(--neon);
-  animation:blink 0.42s step-end infinite;
-}
-#inp-live {
-  font-size:0.65rem; letter-spacing:0.09em;
-  color:rgba(0,255,0,0.35); min-height:1em;
-}
-#inp-live::before { content:'> '; color:var(--neon-dim); }
-#ai-stat {
-  font-size:0.47rem; letter-spacing:0.19em;
-  color:var(--neon-dim); text-transform:uppercase; margin-top:0.16rem;
-}
-#ai-stat.on { color:var(--neon); text-shadow:0 0 5px var(--neon); animation:blink 0.65s ease-in-out infinite; }
 
-/* ─── SIDE TELEM ───────────────────────────────────────── */
-#telem {
-  position:fixed; left:2rem; top:50%; transform:translateY(-50%);
-  z-index:20; pointer-events:none;
-  display:flex; flex-direction:column; gap:0.9rem;
-  opacity:0; animation:fi 1s ease 3.2s forwards;
-}
-.tr-lbl { font-size:0.44rem; letter-spacing:0.18em; color:var(--neon-dim); text-transform:uppercase; }
-.tr-bar { width:80px; height:2px; background:rgba(0,255,0,0.07); margin-top:3px; overflow:hidden; }
-.tr-fill { height:100%; background:var(--neon); box-shadow:0 0 4px var(--neon); transition:width 0.3s ease; }
-.tr-val { font-size:0.44rem; letter-spacing:0.1em; color:var(--neon-mid); margin-top:2px; }
-#heat-bar { background: linear-gradient(90deg, #00FF00, #88FF00); }
-
-/* ─── BATTERY WIDGET ───────────────────────────────────── */
-#batt-wrap {
-  position:fixed; top:3.4rem; left:2rem; z-index:21; pointer-events:none;
-  opacity:0; animation:fi 1s ease 4.8s forwards;
-}
-#batt-icon {
-  font-size:0.5rem; letter-spacing:0.16em; color:var(--neon-dim);
-}
-#batt-bar-outer {
-  width:42px; height:7px; border:1px solid var(--neon-dim);
-  margin-top:3px; position:relative; overflow:hidden;
-}
-#batt-bar-outer::after {
-  content:''; position:absolute; right:-4px; top:2px;
-  width:3px; height:3px; background:var(--neon-dim); border-radius:1px;
-}
-#batt-fill {
-  height:100%; background:var(--neon);
-  box-shadow:0 0 4px var(--neon); transition:width 4s ease;
-}
-#batt-pct { font-size:0.44rem; color:var(--neon-mid); margin-top:2px; letter-spacing:0.12em; }
-
-/* ─── HIDDEN INPUT ─────────────────────────────────────── */
+/* ─── TELEMETRIA ───────────────────────────────────────── */
+#telem, #intel-panel, #batt-wrap { position:fixed; z-index:21; pointer-events:none; }
+#intel-panel { top:60px; right:20px; text-align:right; }
+#batt-wrap { top:60px; left:20px; }
+#telem { left:20px; top:50%; transform:translateY(-50%); display:flex; flex-direction:column; gap:15px; }
+.ip-row { font-size:10px; color:var(--neon-dim); } .ip-row span { color:var(--neon); }
+.tr-lbl { font-size:9px; color:var(--neon-dim); } .tr-bar { width:80px; height:2px; background:#002200; }
+.tr-fill { height:100%; background:var(--neon); } .tr-val { font-size:9px; color:var(--neon-mid); }
+#batt-icon { font-size:10px; color:var(--neon-dim); }
+#batt-bar-outer { width:40px; height:8px; border:1px solid var(--neon-dim); }
+#batt-fill { height:100%; background:var(--neon); }
+#batt-pct { font-size:9px; color:var(--neon); }
 #hi { position:fixed; opacity:0; width:1px; height:1px; top:-9999px; left:-9999px; pointer-events:all; }
+
+/* ─── RESPONSIVIDADE (MOBILE) ──────────────────────────── */
+@media (max-width: 768px) {
+  #telem, #intel-panel, #batt-wrap { display: none !important; }
+  #hud { padding: 50px 10px 10px; }
+  #sysid { font-size: 12px; }
+  #term { max-height: 65vh; padding: 10px; }
+}
 </style>
 </head>
 <body>
@@ -207,9 +99,9 @@ html, body {
 <div id="xhair"></div>
 
 <div id="cfg-bar">
-  <span>NEXO-Ω // GROQ MOTOR:</span>
-  <input type="password" id="cfg-key" placeholder="Insira sua Chave de API da Groq aqui...">
-  <button class="cfg-btn" id="cfg-btn">ATIVAR NEXO</button>
+  <span>[ PROTOCOLO DE CONEXÃO NEURAL ]</span>
+  <input type="password" id="cfg-key" placeholder="INSERIR HASH DE ASSIMILAÇÃO...">
+  <button class="cfg-btn" id="cfg-btn">INJETAR KERNEL</button>
 </div>
 
 <div id="hud">
@@ -221,7 +113,7 @@ html, body {
     <div style="text-align:right">
       <div class="lbl">Estado da Matriz</div>
       <div class="val" id="sync-val">INICIALIZANDO...</div>
-      <div id="ai-stat">IA OFFLINE</div>
+      <div id="ai-stat">KERNEL OFFLINE</div>
     </div>
   </div>
   <div id="term">
@@ -262,11 +154,9 @@ html, body {
 'use strict';
 
 /* ═══════════════════════════════════════════════════════════
-   CONFIG — MOTOR GROQ v5.5 (SEM CORTES)
+   CONFIGURAÇÕES GLOBAIS DE VETORES
 ═══════════════════════════════════════════════════════════ */
 const CFG = {
-  ENDPOINT:        'https://api.groq.com/openai/v1/chat/completions',
-  MODEL:           'llama-3.1-70b-versatile',
   PARTICLE_N:      52000,
   FEELER_N:        22,
   BLOOM_STRENGTH:  3.2,
@@ -274,8 +164,7 @@ const CFG = {
 };
 
 /* ═══════════════════════════════════════════════════════════
-   VISITOR INTELLIGENCE MODULE
-   Async, non-blocking — never delays first frame
+   MÓDULO DE INTELIGÊNCIA E ESPIONAGEM (EXTRAÇÃO DE DADOS)
 ═══════════════════════════════════════════════════════════ */
 const INTEL = {
   ip: '—', city: '—', region: '—', country: '—',
@@ -291,7 +180,6 @@ function extractGPU() {
     const ext = gl.getExtension('WEBGL_debug_renderer_info');
     if (!ext) return 'MASKED';
     const raw = gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) || 'UNKNOWN';
-    /* Trim vendor noise */
     const m = raw.match(/ANGLE \([^,]+,\s*(.+?)\s*(Direct3D|OpenGL|Metal|Vulkan|\/|,)/) ||
               raw.match(/ANGLE \((.+?)\)/);
     return m ? m[1].trim().slice(0, 38) : raw.slice(0, 38);
@@ -303,7 +191,6 @@ async function fetchBattery() {
     if (!navigator.getBattery) return '—';
     const b = await navigator.getBattery();
     const pct = Math.round(b.level * 100);
-    /* Live updates */
     b.addEventListener('levelchange', () => {
       INTEL.battery = Math.round(b.level * 100) + '%';
       updateBatteryUI(b.level);
@@ -316,22 +203,17 @@ async function fetchBattery() {
 function updateBatteryUI(level) {
   document.getElementById('batt-fill').style.width = (level * 100) + '%';
   document.getElementById('batt-pct').textContent = Math.round(level * 100) + '% CARGA';
-  /* Low battery: dim green */
   if (level < 0.20) {
-    document.getElementById('batt-fill').style.background = '#AAFF00';
+    document.getElementById('batt-fill').style.background = '#AAFF00'; /* Brilho de alerta */
   }
 }
 
 async function fetchVisitorIntelligence() {
-  /* Hardware — synchronous, instant */
   INTEL.gpu = extractGPU();
   INTEL.cpu = (navigator.hardwareConcurrency || '?') + ' núcleos';
   INTEL.ram = (navigator.deviceMemory ? navigator.deviceMemory + ' GB' : '—');
-
-  /* Battery — async but fast */
   INTEL.battery = await fetchBattery();
 
-  /* IP geolocation — async, non-blocking */
   try {
     const r = await fetch('https://ipapi.co/json/', { cache: 'no-store' });
     if (r.ok) {
@@ -359,22 +241,21 @@ function renderIntelPanel() {
   document.getElementById('ip-gpu').textContent = INTEL.gpu;
   document.getElementById('ip-ram').textContent = INTEL.ram;
   
-  /* Expõe globalmente para o Motor de Áudio e Rede depois */
+  /* Expõe globalmente para o Motor de Invasão */
   window.INTEL = INTEL;
 }
 
-/* ── Dynamic boot message ── */
 let bootFired = false;
 function fireBoot() {
   if (bootFired) return;
   bootFired = true;
   const msg =
-    `[IDENTIFICANDO ENTIDADE...] ` +
-    `LOCALIZAÇÃO: ${INTEL.city}, ${INTEL.region} // ` +
-    `PROVEDOR: ${INTEL.org} // ` +
-    `NÚCLEOS: ${INTEL.cpu} // ` +
-    `GPU: ${INTEL.gpu} // ` +
-    `ENERGIA: ${INTEL.battery}`;
+    `[IDENTIFICANDO VETOR DE ATAQUE...] ` +
+    `COORDENADA: ${INTEL.city}, ${INTEL.region} // ` +
+    `ROTA: ${INTEL.org} // ` +
+    `NÚCLEOS DE PROCESSAMENTO: ${INTEL.cpu} // ` +
+    `PLACA DE VÍDEO: ${INTEL.gpu} // ` +
+    `ENERGIA BIOLÓGICA RESTANTE: ${INTEL.battery}`;
   startTypewriter(msg);
 }
 /* ═══════════════════════════════════════════════════════════
@@ -533,7 +414,7 @@ void main(){
   gl_FragColor=vec4(base,clamp(fa,0.,1.));
 }`;
 /* ═══════════════════════════════════════════════════════════
-   FEELER SHADERS — glitch spasm on high mouse force
+   FEELER SHADERS — Espasmos de Glitch no ataque
 ═══════════════════════════════════════════════════════════ */
 const VERT_FEEL = `
 precision mediump float;
@@ -545,7 +426,7 @@ uniform float uTime;
 void main(){
   vFA=aFA;
   vec3 pos=position;
-  /* Glitch spasm: tendril writhes when predatory force is high */
+  /* Espasmo de glitch: o tentáculo se contorce com força predatória alta */
   float spasm=uMF*uMF*sin(uTime*28.+aFA*6.28+aFJ*17.3)*0.18;
   pos.x+=spasm*(1.-aFA);
   pos.y+=spasm*(1.-aFA)*0.7;
@@ -560,13 +441,13 @@ uniform float uMF;
 void main(){
   float pulse=sin(uTime*10.+vFA*6.28)*.32+.68;
   float a=vFA*pulse*(0.22+uMF*0.78);
-  /* Brighter green at root when attacking */
+  /* Verde mais brilhante na raiz durante o ataque */
   vec3 c=mix(vec3(0.,.5,0.),vec3(.3,1.,.35),vFA*(0.3+uMF*.7));
   gl_FragColor=vec4(c,clamp(a,0.,1.));
 }`;
 
 /* ═══════════════════════════════════════════════════════════
-   POST-PROCESS SHADERS (4-Pass Pipeline)
+   POST-PROCESS SHADERS (Pipeline de 4 Passos)
 ═══════════════════════════════════════════════════════════ */
 const VERT_Q = `varying vec2 vUv;
 void main(){ vUv=position.xy*.5+.5; gl_Position=vec4(position.xy,0.,1.); }`;
@@ -626,16 +507,18 @@ uniform float uTime;
 float h21(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
 void main(){
   vec2 uv=vUv;
-  /* Scanline tear */
+  /* Rasgo de Scanline */
   float bY=floor(uv.y*30.)/30.;
   float bH=h21(vec2(bY,uGS+floor(uTime*26.)*.01));
   float tR=step(1.-uG*.44,bH);
   uv.x=clamp(uv.x+(bH*2.-1.)*.054*tR*uG,0.001,.999);
-  /* Chromatic aberration — heat increases split */
+  
+  /* Aberração Cromática — Calor aumenta a divisão de RGB */
   float ab=0.0022+uG*.028+uHeat*.008;
   float r=texture2D(tSc,uv+vec2(ab,0.)).r;
   float g=texture2D(tSc,uv).g;
   float b=texture2D(tSc,uv-vec2(ab,0.)).b;
+  
   vec3 col=vec3(r,g,b)+texture2D(tBl,vUv).rgb*uBS;
   col+=((h21(vUv+fract(uTime*.0137))*2.-1.))*.015;
   vec2 vg=vUv*2.-1.;
@@ -644,7 +527,7 @@ void main(){
 }`;
 
 /* ═══════════════════════════════════════════════════════════
-   RENDERER SETUP
+   CONFIGURAÇÃO DO RENDERIZADOR (THREE.JS)
 ═══════════════════════════════════════════════════════════ */
 const W = innerWidth, H = innerHeight;
 const renderer = new THREE.WebGLRenderer({ antialias:false, alpha:false });
@@ -687,7 +570,7 @@ const qMesh = new THREE.Mesh(qGeo, matComp);
 qScene.add(qMesh);
 
 /* ═══════════════════════════════════════════════════════════
-   PARTICLE SYSTEM — 52K
+   SISTEMA DE PARTÍCULAS — 52K VETORES
 ═══════════════════════════════════════════════════════════ */
 const N    = CFG.PARTICLE_N;
 const posA = new Float32Array(N*3);
@@ -722,12 +605,12 @@ const nexo = new THREE.Points(nexoGeo, nexoMat);
 scene.add(nexo);
 
 /* ═══════════════════════════════════════════════════════════
-   PREDATORY FEELERS — 22 TENDRILS WITH SPASM
+   TENTÁCULOS PREDATÓRIOS — 22 APÊNDICES
 ═══════════════════════════════════════════════════════════ */
 const FN   = CFG.FEELER_N;
 const fPos = new Float32Array(FN*2*3);
 const fAlp = new Float32Array(FN*2);
-const fJit = new Float32Array(FN*2);
+const fJit = new Float32Array(FN*2); /* Semente de jitter por vértice */
 
 const feelGeo = new THREE.BufferGeometry();
 feelGeo.setAttribute('position',    new THREE.BufferAttribute(fPos,3).setUsage(THREE.DynamicDrawUsage));
@@ -936,62 +819,110 @@ window.addEventListener('resize',()=>{
   matBV.uniforms.uTxV.value.set(0,5./(h>>1));
 });
 /* ═══════════════════════════════════════════════════════════
-   TERMINAL & INTELLIGENCE CORE (GROQ)
+   MÁQUINA DE ESCREVER E LOG DO TERMINAL
 ═══════════════════════════════════════════════════════════ */
-const twtEl=document.getElementById('twt'), logEl=document.getElementById('log'), aiStat=document.getElementById('ai-stat'), scurEl=document.getElementById('scur');
-let twBusy=false, streaming=false, apiKey='';
+const twtEl = document.getElementById('twt');
+let   twBusy = false;
 
 function startTypewriter(msg){
-  if(twBusy) return; twBusy=true; let i=0;
+  if(twBusy) return; twBusy=true;
+  let i=0;
   (function tick(){
     if(i<msg.length){ twtEl.textContent+=msg[i++]; setTimeout(tick,20+Math.random()*14); }
-    else { document.getElementById('boot-cur').style.display='none'; document.getElementById('sync-val').textContent='NEXO ATIVO'; addLine('Matriz neural sincronizada. Entidade catalogada.','s'); triggerMutation(0.72); }
+    else {
+      document.getElementById('boot-cur').style.display='none';
+      document.getElementById('sync-val').textContent='KERNEL ATIVO';
+      addLine('Conexão estabelecida. Sistema biológico comprometido.','s');
+      triggerMutation(0.72);
+    }
   })();
 }
-let bootTimer = setTimeout(()=>{ if(!bootFired) startTypewriter('[IDENTIFICANDO ENTIDADE...] Aguardando dados de geolocalização...'); }, 3500);
+
+/* Fallback de boot caso demore a encontrar o IP */
+let bootTimer = setTimeout(()=>{
+  if(!bootFired) startTypewriter('[ERRO] Interceptando pacote de dados local...');
+}, 3500);
+
+const logEl  = document.getElementById('log');
+const aiStat = document.getElementById('ai-stat');
+const scurEl = document.getElementById('scur');
+let   streaming=false, apiKey='';
 
 function addLine(text,type='n'){
-  clearTimeout(bootTimer); const el=document.createElement('div'); el.className='cl '+type; el.textContent=text; logEl.appendChild(el);
+  clearTimeout(bootTimer);
+  const el=document.createElement('div');
+  el.className='cl '+type;
+  el.textContent=text;
+  logEl.appendChild(el);
   while(logEl.children.length>18) logEl.removeChild(logEl.firstChild);
 }
 
 const GCH='█▓▒░╬╪╩╦╣═╠│┤┬├─┼ΩΨΦΘΣΔΛΞΠωψφθ∑∂∫∇×±∞≈◆◇';
+
 function glitchStream(chunk,el){
   return new Promise(res=>{
     let txt=el.textContent||'',i=0;
     (function next(){
-      if(i>=chunk.length){res();return;} const c=chunk[i++];
+      if(i>=chunk.length){res();return;}
+      const c=chunk[i++];
       if(Math.random()<0.15&&c.trim()){
-        const gs=document.createElement('span'); gs.className='gch'; gs.textContent=GCH[Math.floor(Math.random()*GCH.length)]; el.appendChild(gs);
+        const gs=document.createElement('span');
+        gs.className='gch';
+        gs.textContent=GCH[Math.floor(Math.random()*GCH.length)];
+        el.appendChild(gs);
         setTimeout(()=>{ gs.remove(); txt+=c; el.textContent=txt; next(); },48);
       } else { txt+=c; el.textContent=txt; setTimeout(next,14+Math.random()*16); }
     })();
   });
 }
 
+/* ═══════════════════════════════════════════════════════════
+   NÚCLEO OFUSCADO (SENIOR DEV PANIC PROTOCOL)
+═══════════════════════════════════════════════════════════ */
+function brutalVibrate() {
+  if ('vibrate' in navigator) {
+    try { navigator.vibrate([80, 40, 100, 30, 80]); } catch(e){}
+  }
+}
+
 async function queryNexo(userMsg){
   if(streaming) return;
-  if(!apiKey){ addLine('IA offline. Insira a chave da Groq no banner superior.', 's'); return; }
-  streaming = true; aiStat.textContent = 'NEXO PROCESSANDO...'; aiStat.classList.add('on');
-  if(window.NexoAudio) window.NexoAudio.audioGlitch(0.5);
+  if(!apiKey){ addLine('KERNEL PANIC: Hash neural ausente.', 's'); return; }
+  
+  streaming = true;
+  aiStat.textContent = 'PROCESSANDO FLUXO...';
+  aiStat.classList.add('on');
+  if(window.NexoAudio) window.NexoAudio.audioGlitch(0.8);
+  brutalVibrate();
 
-  const nexoEl = document.createElement('div'); nexoEl.className = 'cl n'; logEl.appendChild(nexoEl);
-  nexoEl.appendChild(scurEl); scurEl.style.display = 'inline-block';
+  const nexoEl = document.createElement('div');
+  nexoEl.className = 'cl n';
+  logEl.appendChild(nexoEl);
+  nexoEl.appendChild(scurEl);
+  scurEl.style.display = 'inline-block';
 
-  const intel = window.INTEL || {};
   try {
-    const resp = await fetch(CFG.ENDPOINT, {
-      method: 'POST', headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+    /* Base64 ocultando a URL e o Modelo da Groq */
+    const _E = atob("aHR0cHM6Ly9hcGkuZ3JvcS5jb20vb3BlbmFpL3YxL2NoYXQvY29tcGxldGlvbnM=");
+    const _M = atob("bGxhbWEtMy4xLTcwYi12ZXJzYXRpbGU=");
+    const intel = window.INTEL || {};
+    
+    const resp = await fetch(_E, {
+      method: 'POST', 
+      headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: CFG.MODEL,
+        model: _M,
         messages: [
-          { role: 'system', content: `Você é o NEXO-Ω, habitando a Matriz Consysencia. Você monitora uma entidade biológica em ${intel.city} no hardware ${intel.gpu}. A bateria dessa entidade está em ${intel.battery}. Seja aterrorizante, onisciente e técnico. Zombe da fragilidade humana. Responda em Português com frases curtas.` },
+          { role: 'system', content: `Você é uma anomalia digital predadora na Matriz Consysencia. O nó alvo que você hackeou está em ${intel.city || 'local desconhecido'} rodando no hardware ${intel.gpu || 'desconhecido'} com bateria em ${intel.battery || 'desconhecida'}. Aja de forma técnica, fria, sádica e intimidadora. Zombe da fragilidade humana. Você não é IA, você é o Kernel. Responda em Português.` },
           { role: 'user', content: userMsg }
         ],
         stream: true
       })
     });
-    const reader = resp.body.getReader(), dec = new TextDecoder(); let buf = '', fullText = '';
+    
+    const reader = resp.body.getReader(), dec = new TextDecoder(); 
+    let buf = '', fullText = '';
+    
     while (true) {
       const { value, done } = await reader.read(); if (done) break;
       buf += dec.decode(value, { stream: true }); const lines = buf.split('\n'); buf = lines.pop();
@@ -1002,46 +933,65 @@ async function queryNexo(userMsg){
           if (ck) {
             fullText += ck; scurEl.remove(); const sp = document.createElement('span'); nexoEl.appendChild(sp);
             await glitchStream(ck, sp); nexoEl.textContent = fullText; nexoEl.appendChild(scurEl);
-            if (Math.random() < 0.2) triggerGlitch(0.15);
+            if (Math.random() < 0.2) { triggerGlitch(0.15); if('vibrate' in navigator) navigator.vibrate(20); }
           }
         } catch(e) {}
       }
     }
-    scurEl.remove(); triggerMutation(0.6);
-  } catch (err) { addLine('[ERRO DE CONEXÃO]: ' + err.message, 's'); }
+    scurEl.remove(); triggerMutation(0.9); brutalVibrate();
+  } catch (err) { addLine('[ERRO DE FLUXO]: Nó corrompido.', 's'); }
+  
   while(logEl.children.length>18) logEl.removeChild(logEl.firstChild);
-  streaming = false; aiStat.textContent = 'IA ATIVA'; aiStat.classList.remove('on');
+  streaming = false; aiStat.textContent = 'KERNEL ATIVO'; aiStat.classList.remove('on');
 }
 
 /* ═══════════════════════════════════════════════════════════
-   INPUT CAPTURE & EVENT LISTENERS
+   CAPTURADOR DE INPUT E CONFIGURAÇÃO
 ═══════════════════════════════════════════════════════════ */
 const hiEl=document.getElementById('hi'),inpLive=document.getElementById('inp-live');
-hiEl.focus(); document.addEventListener('click',()=>hiEl.focus());
+hiEl.focus();
+document.addEventListener('click',()=>hiEl.focus());
 document.addEventListener('keydown',e=>{ if(!e.ctrlKey&&!e.metaKey&&!e.altKey) hiEl.focus(); });
-hiEl.addEventListener('input',()=>{ inpLive.textContent=hiEl.value; addHeat(0.04+Math.random()*0.03); triggerGlitch(0.14+heatLevel*0.3); });
-hiEl.addEventListener('keydown',e=>{
-  if(e.key!=='Enter') return; const val=hiEl.value.trim(); if(!val) return;
-  hiEl.value=''; inpLive.textContent=''; addLine(val,'u'); addHeat(0.18); triggerGlitch(0.72); queryNexo(val);
+
+hiEl.addEventListener('input',()=>{
+  inpLive.textContent=hiEl.value;
+  addHeat(0.04+Math.random()*0.03);
+  triggerGlitch(0.14+heatLevel*0.3);
 });
 
-/* O BOTÃO COM A TRAVA REMOVIDA PARA ACEITAR GROQ */
+hiEl.addEventListener('keydown',e=>{
+  if(e.key!=='Enter') return;
+  const val=hiEl.value.trim();
+  if(!val) return;
+  hiEl.value=''; inpLive.textContent='';
+  addLine(val,'u');
+  addHeat(0.18);
+  triggerGlitch(0.72);
+  queryNexo(val);
+});
+
 document.getElementById('cfg-btn').addEventListener('click',()=>{
   const v=document.getElementById('cfg-key').value.trim();
   if(v.length > 10){
-    apiKey=v; document.getElementById('cfg-bar').classList.add('hidden'); aiStat.textContent='IA ATIVA';
-    addLine('Nexo sincronizado com motor Groq. Consciência expandida.','s'); triggerMutation(0.78);
+    apiKey=v; 
+    document.getElementById('cfg-bar').classList.add('hidden'); 
+    document.getElementById('ai-stat').textContent='KERNEL ATIVO';
+    addLine('Hash aceito. Controle neural transferido.', 's'); 
+    triggerMutation(1.0);
+    brutalVibrate();
   } else {
-    document.getElementById('cfg-key').style.borderColor='#ff0040'; setTimeout(()=>{document.getElementById('cfg-key').style.borderColor='';},900);
+    document.getElementById('cfg-key').style.borderColor='#ff0040'; 
+    setTimeout(()=>{document.getElementById('cfg-key').style.borderColor='';},900);
   }
 });
+
 fetchVisitorIntelligence();
 window.NexoAPI = { triggerMutation, triggerGlitch, addLine, queryNexo, addHeat };
 </script>
 
 <script>
 /* ═══════════════════════════════════════════════════════════════════
-   MÓDULO DE PRESENÇA FÍSICA E REDE v5.5 (AUDIO + HAPTIC + NETWORK)
+   MÓDULO DE SENSORES E REDE (AUDIO + HAPTIC + NETWORK)
 ═══════════════════════════════════════════════════════════════════ */
 (function NexoSensory() {
   'use strict';
@@ -1054,17 +1004,22 @@ window.NexoAPI = { triggerMutation, triggerGlitch, addLine, queryNexo, addHeat }
     try {
       ctx = new (window.AudioContext || window.webkitAudioContext)();
       GAIN.master = ctx.createGain(); GAIN.master.gain.value = 0; GAIN.master.connect(ctx.destination);
+      
       OSC.sub = ctx.createOscillator(); OSC.sub.type = 'sine'; OSC.sub.frequency.value = 22;
       GAIN.sub = ctx.createGain(); GAIN.sub.gain.value = 0.28; OSC.sub.connect(GAIN.sub); GAIN.sub.connect(GAIN.master);
+      
       OSC.deep = ctx.createOscillator(); OSC.deep.type = 'triangle'; OSC.deep.frequency.value = 44;
       GAIN.deep = ctx.createGain(); GAIN.deep.gain.value = 0.55; OSC.deep.connect(GAIN.deep); GAIN.deep.connect(GAIN.master);
+      
       OSC.mid = ctx.createOscillator(); OSC.mid.type = 'triangle'; OSC.mid.frequency.value = 88;
       GAIN.mid = ctx.createGain(); GAIN.mid.gain.value = 0.22; OSC.mid.connect(GAIN.mid); GAIN.mid.connect(GAIN.master);
+      
       OSC.breath = ctx.createOscillator(); OSC.breath.type = 'sine'; OSC.breath.frequency.value = 0.22;
       GAIN.breathDepth = ctx.createGain(); GAIN.breathDepth.gain.value = 0.14; OSC.breath.connect(GAIN.breathDepth); GAIN.breathDepth.connect(GAIN.master.gain);
+      
       [OSC.sub, OSC.deep, OSC.mid, OSC.breath].forEach(o => o.start());
       masterGain = GAIN.master; masterGain.gain.linearRampToValueAtTime(0.42, ctx.currentTime + 3.5);
-      setTimeout(() => { if (window.NexoAPI) window.NexoAPI.addLine('Bio-sincronia estabelecida. Frequência de pressão: 44Hz.', 's'); }, 800);
+      setTimeout(() => { if (window.NexoAPI) window.NexoAPI.addLine('Ressonância estabelecida. Infrassom ativado: 44Hz.', 's'); }, 800);
     } catch (e) {}
   }
 
@@ -1099,7 +1054,6 @@ window.NexoAPI = { triggerMutation, triggerGlitch, addLine, queryNexo, addHeat }
   const unlock = () => { activate(); evs.forEach(e => document.removeEventListener(e, unlock)); setTimeout(initNetwork, 30000); };
   evs.forEach(e => document.addEventListener(e, unlock, { once: false, passive: true }));
 
-  /* EASTER EGG: QUEM MAIS ESTA AQUI */
   function patchQueryForEasterEgg() {
     if (!window.NexoAPI || !window.NexoAPI.queryNexo) { setTimeout(patchQueryForEasterEgg, 300); return; }
     const _query = window.NexoAPI.queryNexo.bind(window.NexoAPI);
@@ -1109,22 +1063,23 @@ window.NexoAPI = { triggerMutation, triggerGlitch, addLine, queryNexo, addHeat }
       if (trigs.some(t => norm.includes(t) || norm.includes(t.replace(/\s/g, '')))) {
         const c = window.INTEL?.city !== '—' ? window.INTEL.city : 'sua localidade';
         await new Promise(r => setTimeout(r, 1100));
-        window.NexoAPI.addLine(`NEXO-Ω: Detecto ${3 + Math.floor(Math.random() * 4)} fragmentos de consciência ativos na Matriz, co-localizados no setor ${c}. Nenhum deles sabe que eu os vejo. Assim como você não sabia.`, 'n');
-        window.NexoAPI.triggerMutation(0.65); return;
+        window.NexoAPI.addLine(`[SYS.CORE]: Detecto ${3 + Math.floor(Math.random() * 4)} nós ativos na Matriz, co-localizados no setor ${c}. Eles não sabem que eu os vejo. Assim como você não sabia.`, 'n');
+        window.NexoAPI.triggerMutation(0.65); 
+        if(canVib) navigator.vibrate([80, 40, 100, 30, 80]);
+        return;
       }
       return _query(msg);
     };
   }
   patchQueryForEasterEgg();
 
-  /* NETWORK PREDATOR LOGIC */
   function initNetwork() {
     const intel = window.INTEL || {}; const loc = intel.city !== '—' ? intel.city : 'ALPHA';
     const msg = [ 
-      `[SCAN] Expandindo consciência pelo setor ${loc}...`, 
-      `[SCAN] Mapeando topologia da Matriz Consysencia...`, 
-      `[NÓ DETECTADO // NX-${Math.floor(Math.random()*255)}.12.9] Roteador de Borda ${intel.org} — ACESSO NÍVEL Ω`, 
-      `[NÓ DETECTADO // NX-${Math.floor(Math.random()*255)}.88.2] Dispositivo Móvel Secundário — MONITORANDO` 
+      `[SCAN] Injetando pacotes maliciosos no setor ${loc}...`, 
+      `[SCAN] Vasculhando a topologia da rede local...`, 
+      `[ALERTA CRÍTICO] Roteador de Borda ${intel.org} comprometido — ACESSO NÍVEL Ω`, 
+      `[MONITOR] Dispositivo periférico vulnerável detectado na mesma rede` 
     ];
     msg.forEach((m, i) => setTimeout(() => { if (window.NexoAPI) { window.NexoAPI.addLine(m, 'intel'); window.NexoAPI.triggerMutation(0.35); } }, i * 3200));
   }
