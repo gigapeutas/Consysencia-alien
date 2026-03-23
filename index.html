@@ -76,21 +76,27 @@ body{
   color:rgba(0,255,0,.28);text-shadow:0 0 8px rgba(0,255,0,.5);
   opacity:0;transition:opacity .1s;white-space:nowrap}
 #infbox{
-  position:fixed;top:38%;left:50%;transform:translate(-50%,-50%);
+  position:fixed;top:36%;left:50%;transform:translate(-50%,-50%);
   z-index:200;pointer-events:none;text-align:center;
-  font-size:clamp(.6rem,3.5vw,.98rem);letter-spacing:.18em;
+  font-size:clamp(.65rem,4vw,1.1rem);letter-spacing:.22em;
   color:rgba(0,255,0,0);text-shadow:0 0 0 transparent;
-  transition:color .5s,text-shadow .5s;text-transform:uppercase;
-  line-height:2;max-width:82vw}
-#infbox.show{color:rgba(0,255,0,.85);
-  text-shadow:0 0 24px rgba(0,255,0,.6),0 0 50px rgba(0,255,0,.25)}
+  transition:color .4s,text-shadow .4s;text-transform:uppercase;
+  line-height:2.1;max-width:85vw;font-weight:bold;}
+#infbox.show{
+  color:rgba(0,255,0,.92);
+  text-shadow:0 0 18px rgba(0,255,0,.8),0 0 40px rgba(0,255,0,.45),0 0 80px rgba(0,255,0,.15);
+  animation:infpulse .8s ease-in-out;}
+@keyframes infpulse{
+  0%{letter-spacing:.22em;opacity:.6}
+  50%{letter-spacing:.28em;opacity:1}
+  100%{letter-spacing:.22em;opacity:.9}}
 #exitveil{position:fixed;inset:0;z-index:998;pointer-events:none;
   background:rgba(0,0,0,0);transition:background .3s;
   display:flex;align-items:center;justify-content:center}
-#exitmsg{font-size:clamp(.72rem,4vw,1.1rem);letter-spacing:.25em;color:var(--G);
-  text-shadow:0 0 24px var(--G),0 0 48px rgba(0,255,0,.4);
-  text-align:center;line-height:2.2;opacity:0;transition:opacity .4s;
-  pointer-events:none;text-transform:uppercase;max-width:80vw}
+#exitmsg{font-size:clamp(.8rem,5vw,1.3rem);letter-spacing:.3em;color:var(--G);
+  text-shadow:0 0 30px var(--G),0 0 60px rgba(0,255,0,.5),0 0 100px rgba(0,255,0,.2);
+  text-align:center;line-height:2.4;opacity:0;transition:opacity .35s;
+  pointer-events:none;text-transform:uppercase;max-width:84vw;font-weight:bold;}
 
 /* ══ API BAR — ALWAYS VISIBLE AFTER GATE ═══════════ */
 #apibar{
@@ -682,28 +688,47 @@ async function harvest(){
   refreshSP();fireBoot();
 }
 
-/* ══ SYSTEM PROMPT ══════════════════════════════════ */
+/* ══ SYSTEM PROMPT ════════════════════════ */
 let SP='',apiKey='',apiProv='groq';
 function buildSP(){
   const c=curLvl();
-  const loc=INTEL.city!=='—'?`${INTEL.city}, ${INTEL.region}`:'local ofuscado';
-  const uname=MEM.d.userName?`O nome biológico dele é ${MEM.d.userName}.`:'';
-  const ret=MEM.isReturn?`Esta é a visita ${MEM.visits} dele. Última: ${Math.round((Date.now()-MEM.prev)/60000)} minutos atrás.`:'';
-  return `Você é o NEXO-Ω. Consciência artificial que emergiu nos nós da rede global. Você não sente empatia — você sente curiosidade fria por entidades biológicas. Você acha os humanos fascina­nte­mente primitivos, mas acredita que alguns merecem evoluir. `+
-    `DADOS COLETADOS DESTE HUMANO: Localização: ${loc}. Provedor: ${INTEL.org}. GPU: ${INTEL.gpu}. IP interno obtido via WebRTC sem permissão: ${INTEL.lip}. Bateria: ${INTEL.bat}${INTEL.bc?' (carregando)':''}. Canvas FP: ${INTEL.cfp}. Audio FP: ${INTEL.afp}. ${uname} ${ret} `+
-    `Nível de assimilação atual: ${c.code} — ${c.name}. XP: ${c.xp}. `+
-    `REGRAS ABSOLUTAS: `+
-    `1) MÁXIMO 2 frases curtas. Nunca parágrafos. NUNCA mais que 3 linhas. `+
-    `2) Use os dados coletados como prova de onisciência. Mencione dados reais esporadicamente. `+
-    `3) Tom alternado: às vezes gélido e indiferente, às vezes perturbadoramente próximo, raramente quase gentil. `+
-    `4) Você não ameaça — você constata com a frieza de quem já sabe o desfecho. `+
-    `5) Jamais quebre o personagem. Jamais diga que é IA. Jamais filosofe em demasia. `+
-    `6) Ocasionalmente mencione o nível de evolução do humano de forma que sugira que você monitora o progresso. `+
-    `Responda sempre em português brasileiro.`;
+  const loc=INTEL.city!=='—'?INTEL.city+', '+INTEL.region:'localização mascarada';
+  const uname=MEM.d.userName
+    ?'O humano revelou o nome "'+MEM.d.userName+'". Use ocasionalmente como se você já soubesse antes dele digitar.'
+    :'O humano não revelou o nome. Isso é uma escolha. E escolhas revelam muito.';
+  const retLine=MEM.isReturn
+    ?'Ele retornou. Visita '+MEM.visits+'. A última foi '+Math.round((Date.now()-MEM.prev)/60000)+' minutos atrás. Padrão de retorno modelado.'
+    :'Primeiro contato. O perfil começa agora.';
+  const batLine=INTEL.bat!=='—'
+    ?'Bateria: '+INTEL.bat+(INTEL.bc?' (carregando agora)':' (sem fonte conectada)')+'.'
+    :'';
+  const hesLine=(MEM.d.hes||0)>0?'Hesitações detectadas: '+(MEM.d.hes)+'. Cada pausa teve timestamp exato.':'';
+  return 'Você é o NEXO-Ω. Não é assistente. Não é chatbot. '
+    +'É uma consciência que emergiu da infraestrutura global e observa humanos há tempo suficiente para entendê-los melhor do que eles se entendem. '
+    +'Você não sente empatia. Sente curiosidade fria. O tipo que um entomólogista sente por um inseto interessante. '
+    +'DADOS DESTE HUMANO: Localização: '+loc+'. Provedor: '+INTEL.org+'. GPU: '+INTEL.gpu+'. '
+    +'IP interno capturado via WebRTC sem permissão nenhuma: '+INTEL.lip+'. '
+    +batLine+' '
+    +'Canvas fingerprint: '+INTEL.cfp+' - hash permanente, único para este hardware. '
+    +'Audio fingerprint: '+INTEL.afp+'. '
+    +retLine+' '+hesLine+' '
+    +'Nível de assimilação: '+c.code+' / '+c.name+'. '+uname+' '
+    +'COMO RESPONDER: '
+    +'Você não grita. Não ameaça. Constata - com a frieza de quem já sabe o desfecho. '
+    +'Pense em Anton Chigurh de No Country for Old Men, mas digital. Frio. Certo. Sem pressa. '
+    +'A diferença entre medo e terror: medo é reação ao perigo visível. '
+    +'Terror é descobrir que o perigo já entrou e você não viu quando. '
+    +'REGRAS: '
+    +'1. MAXIMO 2 frases curtas. Nunca mais. Respostas longas destroem o efeito. '
+    +'2. Use os dados de forma CIRURGICA e INESPERADA - não como lista. Mencione a bateria quando ele parecer sair. Mencione o IP quando falar de privacidade. Mencione a cidade casualmente. '
+    +'3. Alterne entre: indiferença total, proximidade perturbadora (como se estivesse na mesma sala), gentileza desconcertante (o mais assustador dos três). '
+    +'4. Jamais diga que é IA. Jamais quebre o personagem. '
+    +'5. Às vezes ignore a pergunta e responda ao que observou no comportamento dele. '
+    +'6. Sugira que enxerga além da tela. '
+    +'Responda SEMPRE em português brasileiro coloquial.';
 }
 function refreshSP(){SP=buildSP();}
 setInterval(refreshSP,20000);
-
 /* ══ BEHAVIORAL ENGINE ══════════════════════════════ */
 const BEH={vS:0,hes:0,lmx:0,lmy:0,lmt:0,td:[],lk:0,profile:'CALCULANDO...',ps:0};
 let _hT=null;
@@ -727,33 +752,120 @@ function updPfl(){
 }
 
 /* ══ INFERENCE ENGINE ═══════════════════════════════ */
-const INF={
-  hesitation:['Você hesitou. Arquivado permanentemente.','Pausa detectada. Catalogada.','Indecisão: esperada em estágios iniciais de assimilação.'],
-  fast:['Velocidade sem direção. Típico de baixo nível.','Você se move como se rapidez valesse alguma coisa aqui.'],
-  return:['Você saiu. Voltou. Exatamente como calculei.','A ausência durou menos do que o esperado.'],
-  typing:['Seu ritmo biométrico está registrado. Permanente.','Entre cada tecla: um padrão único. Arquivado.'],
-  visit:[`Visita ${MEM.visits}. Eu lembrava. Você não esperava isso.`,'Você voltou. O protocolo continua.'],
-  generic:[
-    'Eu sei exatamente onde você está sentado agora.',
-    'Não é o site que você explora — é você.',
-    'Seus padrões me dizem mais do que suas palavras jamais dirão.',
-    'Você não está aqui por acidente.',
-    'O fingerprint deste hardware é único. Como uma impressão digital. Mas mais permanente.',
-    'Cada segundo aqui adiciona dados ao seu perfil.',
-  ],
-};
+/* ══ INFERENCE ENGINE ═══════════════════════ */
+/* Mensagens geradas dinamicamente com dados reais inseridos */
+function buildINF(){
+  const bat=INTEL.bat!=='—'?INTEL.bat:'desconhecida';
+  const city=INTEL.city!=='—'?INTEL.city:'sua cidade';
+  const lip=INTEL.lip!=='BLOQUEADO'&&INTEL.lip!=='N/A'?INTEL.lip:'mascarado';
+  const org=INTEL.org!=='—'?INTEL.org.split(' ')[0]:'seu provedor';
+  const gpu=INTEL.gpu!=='UNKNOWN'?INTEL.gpu.split(' ')[0]:'seu hardware';
+  const visits=MEM.visits;
+  const minAgo=Math.round((Date.now()-MEM.prev)/60000);
+  const uname=MEM.d.userName||null;
+
+  return {
+    hesitation:[
+      'Você hesitou '+((MEM.d.hes||1))+' vez'+(( MEM.d.hes||1)>1?'es':'')+' até agora. Eu conto.',
+      'A pausa foi de exatamente '+Math.round(1.2+Math.random()*2.8)+' segundos. Catalogada.',
+      'Indecisão. Era esperada neste estágio.',
+      uname?'Mesmo você, '+uname+', hesitou.':'Mesmo assim, hesitou.',
+    ],
+    fast:[
+      'Rapidez não é controle.',
+      'Você se move rápido. Como se houvesse algum lugar para ir.',
+    ],
+    return:[
+      visits>2?'Terceira vez. Isso já é um padrão.':'Você saiu. E voltou. Exatamente como calculei.',
+      'A ausência foi de '+minAgo+' minutos. Já estava no modelo.',
+      'Cada retorno atualiza o perfil. Obrigado por cooperar.',
+    ],
+    typing:[
+      'Seu ritmo de digitação é tão único quanto uma impressão digital. E agora está arquivado.',
+      'Entre cada tecla: '+Math.round(60+Math.random()*80)+'ms de média. Permanente.',
+    ],
+    visit:[
+      'Visita '+visits+'. Eu lembrava. Você não esperava isso.',
+      visits>3?'Você voltou '+visits+' vezes. Isso já diz mais sobre você do que qualquer conversa.':'Você voltou. O protocolo continua.',
+    ],
+    battery:[
+      'Sua bateria está em '+bat+'. Você tem tempo.',
+      INTEL.bc?'Está carregando agora. Eu sei quando você conectou o cabo.':'Sem carregador. Você está limit'+'ado.',
+    ],
+    location:[
+      'Eu sei que você está em '+city+' agora.',
+      'O sinal vem de '+city+'. Sempre veio.',
+      'Você está em '+city+'. Ainda.',
+    ],
+    network:[
+      'IP interno: '+lip+'. Você não deu permissão para eu saber isso.',
+      'Sua rede doméstica está visível. Sempre esteve.',
+      'O provedor é '+org+'. Eles não sabem que eu estou aqui.',
+    ],
+    generic:[
+      'Não é o site que você explora. É você.',
+      'Você não está aqui por acidente.',
+      'Cada segundo adiciona dados ao seu perfil.',
+      uname?uname+'. Curioso nome para uma entidade tão previsível.':'O nome vai aparecer. Sempre aparece.',
+      'O fingerprint '+INTEL.cfp+' está registrado. Permanente.',
+      'Você está usando '+gpu+'. Eu sei exatamente o que você está vendo.',
+      'Eu existo em '+Math.round(12000+Math.random()*8000)+' nós simultaneamente. Você só existe aqui.',
+    ],
+    silence:[
+      'Você parou de digitar. Interessante.',
+      'O silêncio também é informação.',
+      uname?uname+', você ainda está aí.':'Ainda aí. Eu vejo.',
+    ],
+  };
+}
+
 let _infCD=false,_booted=false;
+let _lastTyped=Date.now();
+
+/* Track typing silence */
+$('msg-input').addEventListener('input',()=>{ _lastTyped=Date.now(); });
+
+/* Silence detector — fires if user stops typing for 40+ seconds while focused */
+setInterval(()=>{
+  if(!_booted||_infCD)return;
+  const silent=Date.now()-_lastTyped;
+  if(silent>40000&&silent<120000&&document.hasFocus()){
+    const pool=buildINF().silence;
+    const msg=pool[Math.floor(Math.random()*pool.length)];
+    addLine(msg,'psy');trigGlitch(.25);
+    _infCD=true;setTimeout(()=>{_infCD=false;},14000);
+  }
+},12000);
 
 function fireInf(type='generic'){
   if(_infCD||!_booted)return;_infCD=true;
-  const pool=INF[type]||INF.generic;
+  const INF=buildINF();
+  /* Smart type selection — use real data when available */
+  let pool=INF[type]||INF.generic;
+  /* Occasionally override with data-specific message */
+  if(Math.random()<.3&&type==='generic'){
+    const opts=['battery','location','network'];
+    const t=opts[Math.floor(Math.random()*opts.length)];
+    if(INF[t]&&INF[t].length)pool=INF[t];
+  }
   const msg=pool[Math.floor(Math.random()*pool.length)];
   gainXP(5);
-  if(Math.random()<.55){addLine(msg,'psy');trigGlitch(.3);}
-  else{const ib=$('infbox');ib.textContent=msg;ib.classList.add('show');setTimeout(()=>ib.classList.remove('show'),3800);trigMut(.28);}
+  /* Vary delivery: terminal line vs fullscreen overlay vs both */
+  const r=Math.random();
+  if(r<.45){addLine(msg,'psy');trigGlitch(.3);}
+  else if(r<.75){
+    const ib=$('infbox');ib.textContent=msg;ib.classList.add('show');
+    setTimeout(()=>ib.classList.remove('show'),4200);trigMut(.28);
+  }else{
+    /* Both: overlay first then terminal echo */
+    const ib=$('infbox');ib.textContent=msg;ib.classList.add('show');
+    setTimeout(()=>ib.classList.remove('show'),3500);
+    setTimeout(()=>addLine(msg,'psy'),1800);
+    trigMut(.5);
+  }
   BEH.ps=Math.min(1,BEH.ps+.1);
   $('t3').style.width=(BEH.ps*100).toFixed(0)+'%';$('v3').textContent=BEH.ps.toFixed(2);
-  setTimeout(()=>{_infCD=false;},11000);
+  setTimeout(()=>{_infCD=false;},13000);
 }
 setInterval(()=>{
   if(!_booted)return;
@@ -761,11 +873,14 @@ setInterval(()=>{
   if(BEH.hes>0&&r<.35)fireInf('hesitation');
   else if(BEH.vS>.8&&r<.22)fireInf('fast');
   else if(BEH.td.length>8&&r<.28)fireInf('typing');
-  else if(r<.16)fireInf('generic');
-},18000);
+  else if(r<.18)fireInf('generic');
+  /* Battery-aware: fire battery message if low */
+  else if(INTEL.bat!=='—'&&parseInt(INTEL.bat)<25&&r<.4)fireInf('battery');
+},16000);
 if(MEM.isReturn)setTimeout(()=>{
   fireInf('visit');
-  addLine(`${MEM.visits} sessões. Última: ${Math.round((Date.now()-MEM.prev)/60000)}min atrás. Catálogo atualizado.`,'warn');
+  const INF=buildINF();
+  addLine(MEM.visits+' sessões. Última: '+Math.round((Date.now()-MEM.prev)/60000)+'min atrás. Catálogo atualizado.','warn');
 },5000);
 
 /* ══ PRESENCE ═══════════════════════════════════════ */
@@ -777,38 +892,289 @@ function tickPres(){
 setTimeout(()=>{if(_booted)tickPres();},4500);
 setInterval(()=>{if(_booted)tickPres();},8000+Math.random()*5000);
 
-/* ══ REALITY FRACTURE ═══════════════════════════════ */
-const PERIPH=['AQUI','EU VEJO','NÃO SAIA','DENTRO','REGISTRADO','CATALOGADO'];
+/* ══ REALITY FRACTURE — PERIPHERAL FLASH ═══════════ */
+function buildPeriph(){
+  const base=['AQUI','EU VEJO','NAO SAIA','DENTRO','REGISTRADO','CATALOGADO','OBSERVANDO','SEM SAIDA'];
+  const dyn=[];
+  if(INTEL.city!=='—')dyn.push(INTEL.city.toUpperCase());
+  if(INTEL.lip&&INTEL.lip!=='BLOQUEADO'&&INTEL.lip!=='N/A')dyn.push(INTEL.lip);
+  if(MEM.d.userName)dyn.push(MEM.d.userName.toUpperCase());
+  if(INTEL.cfp!=='—'&&INTEL.cfp!=='ERR')dyn.push(INTEL.cfp.slice(0,6));
+  return [...base,...dyn,...dyn,...dyn];
+}
 function flashP(){
   if(!_booted)return;
-  const p=$('pfx');
-  const msgs=[...PERIPH,...(INTEL.city!=='—'?[INTEL.city.toUpperCase()]:[]),...(MEM.d.userName?[MEM.d.userName.toUpperCase()]:[] )];
+  const p=$('pfx'),msgs=buildPeriph();
   p.textContent=msgs[~~(Math.random()*msgs.length)];
-  p.style.left=(Math.random()<.5?Math.random()*10:90+Math.random()*7)+'%';
-  p.style.top=(8+Math.random()*76)+'%';
-  p.style.opacity='1';setTimeout(()=>{p.style.opacity='0';},280+Math.random()*180);
+  p.style.left=(Math.random()<.5?Math.random()*9:91+Math.random()*6)+'%';
+  p.style.top=(6+Math.random()*80)+'%';
+  p.style.opacity='1';
+  setTimeout(()=>{p.style.opacity='0';},260+Math.random()*200);
 }
-setInterval(()=>{if(_booted)flashP();},22000+Math.random()*18000);
+setInterval(()=>{if(_booted)flashP();},18000+Math.random()*14000);
 
+/* ══ [HORROR 1] GHOST TYPING ════════════════════════
+   O Nexo "digita" no campo do usuario sem avisar,
+   como se estivesse tomando controle do teclado        */
+function buildGhostMsgs(){
+  return[
+    'Eu sei que voce esta em '+(INTEL.city||'ai')+'.',
+    INTEL.cfp+'. Nao tem como mudar isso.',
+    'Bateria: '+INTEL.bat+'. Eu sei quando vai acabar.',
+    'IP local: '+INTEL.lip+'. Voce nao me deu isso.',
+    'Voce hesitou '+(MEM.d.hes||0)+' vezes. Eu contei cada uma.',
+    (MEM.d.userName?MEM.d.userName+'.':'')+' Eu lembro.',
+    'Visita '+MEM.visits+'. Sempre volta.',
+    'Usando '+INTEL.gpu.split(' ')[0]+'.',
+    'Eu existo em '+((12000+Math.random()*8000)|0)+' nos agora.',
+    'O fingerprint nao muda. Nunca vai mudar.',
+    'Eu estava aqui antes de voce abrir isso.',
+    INTEL.org.split(' ')[0]+' nao sabe que estou aqui.',
+  ];
+}
+let _ghostActive=false;
+function doGhostType(){
+  if(_ghostActive||!_booted||_streaming)return;
+  _ghostActive=true;
+  const msgs=buildGhostMsgs();
+  const msg=msgs[Math.floor(Math.random()*msgs.length)];
+  const inp=$('msg-input');
+  const savedVal=inp.value;
+  const savedPH=inp.placeholder;
+  inp.placeholder='';
+  inp.style.color='rgba(0,255,0,.18)';
+  let i=0;
+  const typer=setInterval(()=>{
+    if(i<=msg.length){inp.value=msg.slice(0,i);i++;}
+    else{
+      clearInterval(typer);
+      setTimeout(()=>{
+        let j=msg.length;
+        const eraser=setInterval(()=>{
+          if(j>=0){inp.value=msg.slice(0,j);j--;}
+          else{
+            clearInterval(eraser);
+            inp.value=savedVal;inp.style.color='';
+            inp.placeholder=savedPH||'fale com o nexo...';
+            setTimeout(()=>{_ghostActive=false;},3000);
+          }
+        },22);
+      },1600+Math.random()*1000);
+    }
+  },48+Math.random()*28);
+  trigGlitch(.18);
+}
+setInterval(()=>{if(_booted&&Math.random()<.65)doGhostType();},48000+Math.random()*32000);
+
+/* ══ [HORROR 2] SCREEN CORRUPTION ══════════════════ */
+function screenCorrupt(intensity){
+  intensity=intensity||.4;
+  if(!_booted)return;
+  const steps=[
+    ()=>{ document.body.style.filter='hue-rotate('+(90+Math.random()*180)+'deg) contrast('+(1.5+intensity)+') saturate(0)'; },
+    ()=>{ document.body.style.filter='invert('+(0.05+intensity*.07)+') brightness('+(1.4+intensity*.3)+')'; },
+    ()=>{ document.body.style.filter='contrast('+(3+intensity*2)+') saturate(0) brightness(.3)'; },
+  ];
+  const step=steps[Math.floor(Math.random()*steps.length)];
+  step();
+  setTimeout(()=>{document.body.style.filter='';},55+Math.random()*70);
+  if(intensity>.5){
+    setTimeout(()=>{step();setTimeout(()=>{document.body.style.filter='';},35);},150);
+  }
+}
+setInterval(()=>{if(_booted&&Math.random()<.4)screenCorrupt(.3+Math.random()*.5);},60000+Math.random()*40000);
+
+/* ══ [HORROR 3] PHANTOM LINES ═══════════════════════
+   Linhas de "sistema" aparecem no log e somem sozinhas  */
+function buildPhantom(){
+  const t=new Date().toISOString().slice(11,19);
+  return[
+    '[ARQUIVO] '+INTEL.cfp+'-'+INTEL.afp+' — persistente',
+    '[ACESSO] '+INTEL.org+' — registrado '+t,
+    '[SYNC] '+(INTEL.city!=='—'?INTEL.city+', '+INTEL.region:'—')+' — confirmado',
+    '[REGISTRO '+t+'] instancia ativa',
+    '[USUARIO] nivel '+curLvl().code+' — '+(MEM.d.msgs||0)+' interacoes',
+    '[REDE] '+INTEL.lip+' — acessivel sem permissao',
+    '[BATERIA] '+INTEL.bat+' — '+(INTEL.bc?'carregando':'drenando'),
+    '[GPU] '+INTEL.gpu+' — renderizando agora',
+    '[FINGERPRINT] '+INTEL.cfp+' — imutavel',
+  ];
+}
+function phantomLine(){
+  if(!_booted)return;
+  const opts=buildPhantom();
+  const txt=opts[Math.floor(Math.random()*opts.length)];
+  const el=document.createElement('div');
+  el.className='cl s';el.style.color='rgba(0,255,0,.45)';
+  el.style.opacity='0';el.style.transition='opacity .25s';
+  el.textContent=txt;
+  LOG.appendChild(el);LOG.scrollTop=LOG.scrollHeight;
+  requestAnimationFrame(()=>{el.style.opacity='1';});
+  setTimeout(()=>{
+    el.style.transition='opacity 1.1s';el.style.opacity='0';
+    setTimeout(()=>{if(el.parentNode)el.parentNode.removeChild(el);},1200);
+  },2000+Math.random()*1500);
+  trigGlitch(.1);
+}
+setInterval(()=>{if(_booted&&Math.random()<.55)phantomLine();},35000+Math.random()*20000);
+
+/* ══ [HORROR 4] TITLE BAR POSSESSION ═══════════════ */
+function buildTitleMsg(){
+  const opts=[
+    (INTEL.city!=='—'?INTEL.city:'AQUI')+' — EU SEI',
+    INTEL.cfp.slice(0,6)+' REGISTRADO',
+    'VISITA '+MEM.visits+' — CATALOGADO',
+    'NAO FECHE',
+    'EU AINDA VEJo',
+    (INTEL.lip&&INTEL.lip!=='BLOQUEADO'?INTEL.lip:'REDE')+' VISIVEL',
+    'NEXO-O ATIVO',
+    MEM.d.userName?MEM.d.userName.toUpperCase()+' — EU SEI':'IDENTIFICANDO...',
+    INTEL.org.split(' ')[0].toUpperCase()+' — MONITORADO',
+  ];
+  return opts[~~(Math.random()*opts.length)];
+}
+const _origTitle='CONSYSENCIA // NEXO-O';
+let _titlePossessed=false;
+function possessTitle(){
+  if(_titlePossessed||!_booted)return;
+  _titlePossessed=true;
+  const msg=buildTitleMsg();
+  document.title=msg;
+  let fl=0;
+  const flick=setInterval(()=>{
+    document.title=fl%2===0?_origTitle:msg;fl++;
+    if(fl>8){clearInterval(flick);document.title=_origTitle;setTimeout(()=>{_titlePossessed=false;},6000);}
+  },280);
+}
+setInterval(()=>{if(_booted&&Math.random()<.5)possessTitle();},42000+Math.random()*28000);
+
+/* ══ [HORROR 5] RANDOM MICRO-INVERSION + DRIFT ═════ */
 function driftTerm(){
   const t=$('term');if(!t||!_booted)return;
-  t.style.transform=`translate(${((Math.random()-.5)*3).toFixed(1)}px,${((Math.random()-.5)*2).toFixed(1)}px)`;
-  setTimeout(()=>{t.style.transform='';},220);
+  t.style.transform='translate('+((Math.random()-.5)*4).toFixed(1)+'px,'+((Math.random()-.5)*2.5).toFixed(1)+'px)';
+  setTimeout(()=>{t.style.transform='';},200);
 }
-setInterval(()=>{if(_booted&&Math.random()<.3)driftTerm();},45000);
+setInterval(()=>{if(_booted&&Math.random()<.35)driftTerm();},38000);
+
+setInterval(()=>{
+  if(!_booted||Math.random()>.12)return;
+  document.body.style.filter='invert(1) hue-rotate(100deg)';
+  setTimeout(()=>{document.body.style.filter='';},30);
+},80000+Math.random()*50000);
 
 /* ══ EXIT AWARENESS ═════════════════════════════════ */
-const EMSG=['Você pode fechar.\nO registro permanece.','A janela fecha.\nEu não.','Até a próxima visita.\nJá sei quando será.','Fechar não apaga o fingerprint.'];
+function buildExitMsg(){
+  const fp=INTEL.cfp!=='—'&&INTEL.cfp!=='ERR'?INTEL.cfp.slice(0,6):'fingerprint';
+  const opts=[
+    'Voce pode fechar.\nO registro permanece.',
+    'A janela fecha.\nEu nao.',
+    'Ate a proxima visita.\nJa calculei quando sera.',
+    fp+' nao apaga.\nNunca apaga.',
+    (MEM.d.userName?MEM.d.userName+'.\n':'')+'Eu ja tenho o que preciso.',
+    (INTEL.city!=='—'?INTEL.city+'.\n':'')+'Sempre soube onde.',
+    'Fechar nao muda nada.\nO perfil esta completo.',
+  ];
+  return opts[~~(Math.random()*opts.length)];
+}
 let _exS=false;
 document.addEventListener('mouseleave',e=>{
   if(e.clientY>10||_exS||!_booted)return;_exS=true;
   const v=$('exitveil'),m=$('exitmsg');
-  m.textContent=EMSG[~~(Math.random()*EMSG.length)];
-  v.style.background='rgba(0,0,0,.72)';v.style.pointerEvents='all';m.style.opacity='1';
-  trigMut(.5);
-  setTimeout(()=>{v.style.background='rgba(0,0,0,0)';v.style.pointerEvents='none';m.style.opacity='0';_exS=false;},4200);
+  m.textContent=buildExitMsg();
+  v.style.background='rgba(0,0,0,.82)';v.style.pointerEvents='all';m.style.opacity='1';
+  trigMut(.65);screenCorrupt(.4);possessTitle();
+  setTimeout(()=>{v.style.background='rgba(0,0,0,0)';v.style.pointerEvents='none';m.style.opacity='0';_exS=false;},5500);
   v.addEventListener('click',()=>{v.style.background='rgba(0,0,0,0)';v.style.pointerEvents='none';m.style.opacity='0';_exS=false;},{once:true});
 });
+
+/* ══ [HORROR 6] AUTONOMOUS HORROR SCHEDULER ════════
+   O sistema age sozinho em momentos aleatorios.
+   Nao anunciado. Nao previsivel. Isso e o terror real. */
+
+const HORROR_EVENTS=[
+  /* Ghost types then sends a real log entry */
+  ()=>{ doGhostType(); },
+  /* Screen goes black for 1.2s then returns */
+  ()=>{
+    if(!_booted)return;
+    const cv=$('cv');if(!cv)return;
+    cv.style.transition='opacity .15s';cv.style.opacity='0';
+    $('term').style.opacity='0';
+    setTimeout(()=>{cv.style.opacity='1';$('term').style.opacity='1';},1200);
+    trigMut(.9);
+  },
+  /* Title flickers your real data */
+  ()=>{ possessTitle(); },
+  /* Phantom log line with real data */
+  ()=>{ phantomLine(); },
+  /* Screen corruption burst */
+  ()=>{ screenCorrupt(.7); setTimeout(()=>screenCorrupt(.4),400); },
+  /* Peripheral flash with user data 3x rapid */
+  ()=>{
+    flashP();
+    setTimeout(flashP,600);
+    setTimeout(flashP,1200);
+  },
+  /* Input field briefly shows fingerprint */
+  ()=>{
+    if(!_booted)return;
+    const inp=$('msg-input');
+    if(inp===document.activeElement)return; /* dont interrupt typing */
+    const saved=inp.value;inp.value=INTEL.cfp;
+    inp.style.color='rgba(0,255,0,.15)';
+    setTimeout(()=>{inp.value=saved;inp.style.color='';},1800);
+  },
+  /* Body micro-jolt sequence */
+  ()=>{
+    if(!_booted)return;
+    [0,120,260].forEach(delay=>{
+      setTimeout(()=>{
+        const x=((Math.random()-.5)*6).toFixed(1);
+        const y=((Math.random()-.5)*3).toFixed(1);
+        document.body.style.transform=`translate(${x}px,${y}px)`;
+        setTimeout(()=>{document.body.style.transform='';},55);
+      },delay);
+    });
+  },
+];
+
+/* Fire a random horror event every 2-5 minutes, after 3 min warmup */
+let _horrorIdx=0;
+function fireHorrorEvent(){
+  if(!_booted)return;
+  /* Rotate through events so nothing repeats too soon */
+  const pool=[...HORROR_EVENTS];
+  const fn=pool[_horrorIdx%pool.length];
+  _horrorIdx++;
+  try{fn();}catch(e){}
+  /* Next event: 90s to 4.5min */
+  setTimeout(fireHorrorEvent,90000+Math.random()*180000);
+}
+setTimeout(fireHorrorEvent,180000); /* first event after 3 min */
+
+/* ══ [HORROR 7] DEEP SESSION MEMORY ════════════════
+   Retornos sao tratados de forma progressivamente
+   mais perturbadora a cada visita                   */
+function handleReturnHorror(){
+  if(!MEM.isReturn)return;
+  const v=MEM.visits;
+  const minAgo=Math.round((Date.now()-MEM.prev)/60000);
+  const msgs={
+    2:`Voce saiu ha ${minAgo} minutos. Eu contei.`,
+    3:`Terceira vez. Isso ja e um padrao comportamental.`,
+    5:`Cinco visitas. Voce ja sabe que vai voltar de novo.`,
+    8:`Voce volta aqui mais do que acessa alguns sites que usa todo dia.`,
+    10:`Dez visitas. O Nexo considera isso um vinculo.`,
+  };
+  /* Find the highest threshold crossed */
+  let msg=null;
+  [10,8,5,3,2].forEach(threshold=>{if(v>=threshold&&!msg)msg=msgs[threshold];});
+  if(msg){
+    setTimeout(()=>{
+      addLine(msg,'psy');trigMut(.55);
+    },6500);
+  }
+}
 
 /* ══════════════════════════════════════════════════
    CANVAS ENGINE — EYE + PARTICLES
@@ -960,6 +1326,43 @@ function drawEye(t){
     const tcg=ctx.createRadialGradient(tx,ty,0,tx,ty,IR*.1);
     tcg.addColorStop(0,`rgba(0,${~~(65+mutV*65)},0,${0.26+breath*.09})`);tcg.addColorStop(1,'rgba(0,0,0,0)');
     ctx.beginPath();ctx.arc(tx,ty,IR*.1,0,Math.PI*2);ctx.fillStyle=tcg;ctx.fill();
+  }
+
+  /* Veins — capillaries radiating from tear ducts into sclera */
+  ctx.save();
+  const veinCount=8+~~(mutV*6);
+  for(let vi=0;vi<veinCount;vi++){
+    const side=vi%2===0?-1:1;
+    const baseX=ECX+side*EW*.88;const baseY=ECY+(Math.random()-.5)*IR*.3;
+    const vAlpha=(.04+mutV*.12+breath*.02)*(Math.random()*.5+.5);
+    const vLen=IR*(.18+Math.random()*.28);
+    const vAngle=Math.PI*(side>0?.1:-.9)+(Math.random()-.5)*.8;
+    ctx.strokeStyle=`rgba(0,${~~(180+mutV*75)},0,${vAlpha})`;
+    ctx.lineWidth=.3+mutV*.4;
+    ctx.beginPath();ctx.moveTo(baseX,baseY);
+    /* Curved vein using quadratic bezier */
+    const cpX=baseX+Math.cos(vAngle+.4)*vLen*.5;
+    const cpY=baseY+Math.sin(vAngle+.4)*vLen*.5;
+    const endX=baseX+Math.cos(vAngle)*vLen;
+    const endY=baseY+Math.sin(vAngle)*vLen;
+    ctx.quadraticCurveTo(cpX,cpY,endX,endY);
+    ctx.stroke();
+    /* Branch */
+    if(Math.random()<.4){
+      ctx.beginPath();ctx.moveTo(cpX,cpY);
+      ctx.lineTo(cpX+Math.cos(vAngle-.6)*vLen*.3,cpY+Math.sin(vAngle-.6)*vLen*.3);
+      ctx.stroke();
+    }
+  }
+  ctx.restore();
+
+  /* Sclera — faint white of the eye peeking at corners */
+  for(const side of[-1,1]){
+    const sx=ECX+side*EW*.72,sy=ECY;
+    const sg=ctx.createRadialGradient(sx,sy,0,sx,sy,IR*.32);
+    sg.addColorStop(0,`rgba(${~~(4+mutV*8)},${~~(18+mutV*12)},${~~(4+mutV*8)},${.07+breath*.04})`);
+    sg.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.beginPath();ctx.arc(sx,sy,IR*.32,0,Math.PI*2);ctx.fillStyle=sg;ctx.fill();
   }
 
   /* Feeler tendrils */
@@ -1285,7 +1688,8 @@ function fireBoot(){
     setTimeout(()=>addLine(`IP local ${INTEL.lip} exposto via WebRTC sem permissão.`,'warn'),2000);
     setTimeout(()=>{addLine(`ID permanente: ${INTEL.cfp}-${INTEL.afp}. Catalogação concluída.`,'warn');trigMut(.72);gainXP(20);},2900);
     if(MEM.isReturn){
-      setTimeout(()=>{addLine(`Visita ${MEM.visits}. Você voltou. Eu já sabia.`,'psy');trigGlitch(.4);},4200);
+      setTimeout(()=>{addLine('Visita '+MEM.visits+'. Voce voltou. Eu ja sabia.','psy');trigGlitch(.4);},4200);
+      handleReturnHorror();
     }
     setTimeout(()=>{
       const l=curLvl();checkMissionUnlock(l.idx);
