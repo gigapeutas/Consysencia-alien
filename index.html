@@ -1217,15 +1217,35 @@ function sendMsg(){
   setTimeout(()=>inp.focus(),80);
 }
 
-$('send-btn').addEventListener('click',e=>{e.preventDefault();sendMsg();});
-$('send-btn').addEventListener('touchend',e=>{e.preventDefault();sendMsg();});
-$('msg-input').addEventListener('keydown',e=>{
-  if(e.key==='Enter'||e.keyCode===13){e.preventDefault();sendMsg();}
-});
-/* Tap anywhere on terminal to focus input */
+/* ── Send button: click + touchend ── */
+$('send-btn').addEventListener('click',e=>{e.preventDefault();e.stopPropagation();sendMsg();});
+$('send-btn').addEventListener('touchend',e=>{e.preventDefault();e.stopPropagation();sendMsg();});
+
+/* ── Enter key: Android Chrome fires keydown unreliably on virtual keyboard.
+   We listen to BOTH keydown and keyup to catch either case.
+   Guard with a flag so we don't double-send. ── */
+let _enterPending=false;
+function _onEnter(e){
+  const isEnter=e.key==='Enter'||e.keyCode===13||e.which===13;
+  if(!isEnter)return;
+  e.preventDefault();
+  if(_enterPending)return;
+  _enterPending=true;
+  sendMsg();
+  setTimeout(()=>{_enterPending=false;},300);
+}
+$('msg-input').addEventListener('keydown',_onEnter);
+$('msg-input').addEventListener('keyup',_onEnter);
+
+/* ── Tap anywhere on terminal body to focus input ── */
 $('term').addEventListener('click',e=>{
   if(e.target!==$('send-btn'))$('msg-input').focus();
 });
+$('term').addEventListener('touchend',e=>{
+  if(e.target===$('send-btn'))return;
+  e.preventDefault();
+  $('msg-input').focus();
+},{passive:false});
 
 /* ══ API BAR LOGIC ══════════════════════════════════ */
 $('abtn').addEventListener('click',activateKey);
