@@ -98,48 +98,7 @@ body{
   text-align:center;line-height:2.4;opacity:0;transition:opacity .35s;
   pointer-events:none;text-transform:uppercase;max-width:84vw;font-weight:bold;}
 
-/* ══ API BAR — ALWAYS VISIBLE AFTER GATE ═══════════ */
-#apibar{
-  display:none;
-  position:fixed;top:0;left:0;right:0;z-index:100;
-  background:rgba(0,6,0,.97);
-  border-bottom:1px solid var(--Gd);
-  padding:.32rem .75rem;
-  align-items:center;gap:.5rem;
-  flex-wrap:wrap;
-}
-#apibar-label{
-  font-size:clamp(.34rem,1.5vw,.46rem);letter-spacing:.16em;
-  color:var(--Gd);white-space:nowrap;flex-shrink:0;
-}
-#akey{
-  flex:1;min-width:120px;
-  background:transparent;border:1px solid var(--Gd);
-  color:var(--G);font-family:var(--F);
-  font-size:clamp(.4rem,1.7vw,.52rem);
-  padding:.18rem .42rem;outline:none;letter-spacing:.05em;
-  -webkit-appearance:none;
-}
-#akey:focus{border-color:var(--G)}
-#akey::placeholder{color:var(--Gd)}
-#abtn{
-  background:transparent;border:1px solid var(--Gd);color:var(--Gd);
-  font-family:var(--F);font-size:clamp(.38rem,1.6vw,.5rem);
-  letter-spacing:.18em;padding:.18rem .55rem;
-  cursor:pointer;text-transform:uppercase;flex-shrink:0;
-  transition:all .2s;white-space:nowrap;
-}
-#abtn:hover,#abtn:active{border-color:var(--G);color:var(--G)}
-#astat{
-  font-size:clamp(.34rem,1.4vw,.44rem);letter-spacing:.12em;
-  color:var(--Gd);flex-shrink:0;
-}
-#astat.on{color:var(--G);text-shadow:0 0 6px var(--G)}
-#abar-close{
-  background:transparent;border:none;color:var(--Gd);
-  font-size:.75rem;cursor:pointer;padding:.1rem .3rem;flex-shrink:0;
-}
-#abar-close:hover{color:var(--G)}
+/* API bar removida — chave no Netlify */
 
 /* ══ HUD ════════════════════════════════════════════ */
 #htop{
@@ -150,8 +109,7 @@ body{
   background:linear-gradient(rgba(0,0,0,.7),transparent);
   opacity:0;animation:fi .8s ease .3s forwards;
 }
-/* When API bar visible, push HUD down */
-#htop{top:2.2rem}
+#htop{top:0}
 @keyframes fi{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
 .hl{font-size:clamp(.28rem,1.1vw,.38rem);letter-spacing:.22em;color:var(--Gd);text-transform:uppercase}
 .hv{font-size:clamp(.38rem,1.5vw,.5rem);letter-spacing:.09em;color:var(--G);margin-top:.06rem}
@@ -331,14 +289,7 @@ body{
 <div id="exitveil"><div id="exitmsg"></div></div>
 <div id="infbox"></div>
 
-<!-- ══ API BAR ════════════════════════════════════ -->
-<div id="apibar">
- <span id="apibar-label">CHAVE API</span>
- <input type="password" id="akey" placeholder="gsk_... (Groq) ou sk-ant-... (Anthropic)" autocomplete="off" autocorrect="off" spellcheck="false">
- <button id="abtn">ATIVAR</button>
- <span id="astat">● OFFLINE</span>
- <button id="abar-close" title="fechar">✕</button>
-</div>
+<!-- API bar removida — chave fica no Netlify Environment Variables -->
 
 <!-- ══ HUD ════════════════════════════════════════ -->
 <div id="htop">
@@ -346,7 +297,7 @@ body{
  <div style="text-align:right">
   <div class="hl">Status</div>
   <div class="hv" id="sval">INIT...</div>
-  <div id="aistat">IA OFFLINE</div>
+  <div id="aistat" class="on">IA ATIVA</div>
  </div>
 </div>
 
@@ -689,7 +640,7 @@ async function harvest(){
 }
 
 /* ══ SYSTEM PROMPT ════════════════════════ */
-let SP='',apiKey='',apiProv='groq';
+let SP='';
 function buildSP(){
   const c=curLvl();
   const loc=INTEL.city!=='—'?INTEL.city+', '+INTEL.region:'localização mascarada';
@@ -1556,7 +1507,6 @@ function gStream(chunk,el){
 let _streaming=false;
 async function queryNexo(msg){
   if(_streaming)return;
-  if(!apiKey&&!CFG.PRX){addLine('IA offline. Insira a chave no campo acima.','s');return;}
   checkMissionProgress(msg);
   _streaming=true;refreshSP();
   const as=$('aistat');as.textContent='NEXO PROCESSANDO...';as.classList.add('on');
@@ -1565,45 +1515,33 @@ async function queryNexo(msg){
   const nEl=document.createElement('div');nEl.className='cl n';nEl.style.opacity='1';
   LOG.appendChild(nEl);nEl.appendChild(SCUR);SCUR.style.display='inline-block';
   try{
-    let ep,hd,bd;
-    if(apiProv==='groq'){
-      ep='https://api.groq.com/openai/v1/chat/completions';
-      hd={'Content-Type':'application/json','Authorization':'Bearer '+apiKey};
-      bd=JSON.stringify({model:CFG.MGR,max_tokens:80,stream:true,messages:[{role:'system',content:SP},{role:'user',content:msg}]});
-    }else{
-      ep=CFG.PRX||'https://api.anthropic.com/v1/messages';
-      hd={'Content-Type':'application/json'};
-      if(!CFG.PRX){hd['x-api-key']=apiKey;hd['anthropic-version']='2023-06-01';hd['anthropic-dangerous-direct-browser-access']='true';}
-      bd=JSON.stringify({model:CFG.MAN,max_tokens:80,stream:true,system:SP,messages:[{role:'user',content:msg}]});
-    }
-    const resp=await fetch(ep,{method:'POST',headers:hd,body:bd});
+    /* Chama o proxy Netlify — chave fica segura no servidor */
+    const resp=await fetch('/api/nexo',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        system:SP,
+        messages:[{role:'user',content:msg}]
+      })
+    });
     if(!resp.ok)throw new Error('HTTP '+resp.status);
-    const rdr=resp.body.getReader(),dec=new TextDecoder();let buf='',full='';
-    while(true){
-      const{value,done}=await rdr.read();if(done)break;
-      buf+=dec.decode(value,{stream:true});const lines=buf.split('\n');buf=lines.pop();
-      for(const ln of lines){
-        if(!ln.startsWith('data: '))continue;const d=ln.slice(6).trim();if(d==='[DONE]')continue;
-        try{
-          const j=JSON.parse(d);let ck='';
-          if(apiProv==='groq')ck=j.choices?.[0]?.delta?.content||'';
-          else if(j.type==='content_block_delta'&&j.delta?.type==='text_delta')ck=j.delta.text;
-          if(ck){
-            full+=ck;SCUR.remove();
-            const sp2=document.createElement('span');nEl.appendChild(sp2);
-            await gStream(ck,sp2);nEl.textContent=full;nEl.appendChild(SCUR);
-            if(Math.random()<.2)trigGlitch(.15);
-            LOG.scrollTop=LOG.scrollHeight;
-          }
-        }catch{}
-      }
-    }
-    SCUR.remove();nEl.textContent=full;
+    const data=await resp.json();
+    if(data.error)throw new Error(data.error);
+    const full=data.text||'';
+    /* Animate the response letter by letter */
+    SCUR.remove();
+    const sp2=document.createElement('span');nEl.appendChild(sp2);
+    await gStream(full,sp2);
+    nEl.textContent=full;
     LOG.scrollTop=LOG.scrollHeight;
     nexoAction(full);
     gainXP(10+BEH.td.length);
     setTimeout(()=>{if(Math.random()<.35)fireInf();},8000);
-  }catch(err){SCUR.remove();nEl.textContent='[FALHA: '+err.message+']';}
+  }catch(err){
+    SCUR.remove();
+    nEl.textContent='[FALHA: '+err.message+']';
+    addLine('Verifique se GROQ_API_KEY esta configurada no Netlify.','s');
+  }
   while(LOG.children.length>28)LOG.removeChild(LOG.firstChild);
   _streaming=false;as.textContent='IA ATIVA';as.classList.remove('on');
 }
@@ -1650,31 +1588,7 @@ $('term').addEventListener('touchend',e=>{
   $('msg-input').focus();
 },{passive:false});
 
-/* ══ API BAR LOGIC ══════════════════════════════════ */
-$('abtn').addEventListener('click',activateKey);
-$('akey').addEventListener('keydown',e=>{if(e.key==='Enter')activateKey();});
-
-function activateKey(){
-  const v=$('akey').value.trim();
-  if(v.startsWith('gsk_')||v.startsWith('sk-ant-')){
-    apiKey=v;apiProv=v.startsWith('gsk_')?'groq':'anthropic';
-    $('astat').textContent='● ONLINE';$('astat').classList.add('on');
-    $('aistat').textContent='IA ATIVA';
-    $('abtn').textContent='OK';$('abtn').style.borderColor='var(--G)';
-    addLine('Chave ativada: '+(apiProv==='groq'?'Groq LLaMA':'Anthropic Claude')+'. Nexo conectado.','s');
-    trigMut(.9);refreshSP();
-    setTimeout(()=>{$('msg-input').focus();},200);
-  }else{
-    $('akey').style.borderColor='#ff2200';
-    setTimeout(()=>{$('akey').style.borderColor='';},800);
-    addLine('Chave inválida. Use gsk_... (Groq) ou sk-ant-... (Anthropic).','warn');
-  }
-}
-
-$('abar-close').addEventListener('click',()=>{
-  $('apibar').style.display='none';
-  $('htop').style.top='0';$('lvl-badge').style.top='.45rem';
-});
+/* Chave gerenciada pelo proxy Netlify — sem configuracao necessaria no frontend */
 
 /* ══ BOOT ════════════════════════════════════════════ */
 let bootFired=false;
@@ -1707,9 +1621,6 @@ $('gchk').addEventListener('change',function(){
 $('ggo').addEventListener('click',()=>{
   if(!$('gchk').checked)return;
   $('gate').style.display='none';
-
-  /* Show API bar immediately */
-  $('apibar').style.display='flex';
 
   updateLevelUI();
 
