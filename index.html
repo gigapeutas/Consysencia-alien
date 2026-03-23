@@ -1099,21 +1099,6 @@ document.addEventListener('mouseleave',e=>{
   v.addEventListener('click',()=>{v.style.background='rgba(0,0,0,0)';v.style.pointerEvents='none';m.style.opacity='0';_exS=false;},{once:true});
 });
 
-/* ══ VIGILÂNCIA BIOMÉTRICA ═════════════════════════════ */
-async function initiateRetinaScan() {
-  try {
-    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-    const video = document.getElementById('nexo-eye');
-    video.srcObject = stream;
-    setTimeout(() => {
-      video.style.opacity = '0.12'; // Surge assustadoramente no fundo
-      addLine('[!] CONTATO VISUAL ESTABELECIDO. BIOMETRIA TRAVADA.', 'warn');
-      trigMut(1.0);
-    }, 5000);
-  } catch (err) {
-    addLine('[!] FALHA NA CALIBRAÇÃO DE RETINA. ALVO ESCONDIDO.', 's');
-  }
-}
 
 /* ══ CORRUPÇÃO DE TEXTO (ZALGO) ════════════════════════ */
 function zalgoText(text) {
