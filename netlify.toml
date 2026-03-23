@@ -1,0 +1,9 @@
+[build]
+  publish = "."
+  functions = "netlify/functions"
+
+# Redireciona /api/nexo para a function (URL mais limpa no frontend)
+[[redirects]]
+  from = "/api/nexo"
+  to   = "/.netlify/functions/nexo"
+  status = 200
