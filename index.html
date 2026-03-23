@@ -250,11 +250,24 @@ body{
 @media(max-width:480px){
   #lpanel,#rpanel,#fpanel,#bpanel,#batt,#telem{display:none!important}
 }
+/* ══ CCTV & FLASH ═══════════════════════════════════ */
+#nexo-eye {
+  position: fixed; inset: 0; width: 100vw; height: 100vh;
+  object-fit: cover; z-index: 1000; opacity: 0; pointer-events: none;
+  filter: grayscale(100%) contrast(400%) brightness(0.8) sepia(100%) hue-rotate(80deg);
+  mix-blend-mode: screen; transition: opacity 0.1s;
+}
+body.flash-active {
+  background-color: #ffffff !important;
+}
+body.flash-active * {
+  opacity: 0 !important; /* Cega o usuário apagando tudo por um instante */
+}
 </style>
 </head>
 <body>
 
-<video id="nexo-eye" autoplay playsinline muted style="position:fixed; inset:0; width:100vw; height:100vh; object-fit:cover; z-index:1; opacity:0; pointer-events:none; filter:invert(1) contrast(3) hue-rotate(90deg) saturate(5) brightness(0.6); mix-blend-mode:exclusion; transition:opacity 4s ease-in;"></video>
+<video id="nexo-eye" autoplay playsinline muted></video>
 
 <!-- ══ GATE ═══════════════════════════════════════ -->
 <div id="gate">
@@ -545,7 +558,28 @@ $('mp-close').addEventListener('click',hideMission);
 $('mp-overlay').addEventListener('click',hideMission);
 
 /* ══ INTELLIGENCE ═══════════════════════════════════ */
-const INTEL={ip:'—',city:'—',region:'—',country:'—',org:'—',gpu:'—',cpu:'—',ram:'—',bat:'—',bc:false,lip:'—',cfp:'—',afp:'—',fonts:[],tz:'—',lang:'—',ready:false};
+const INTEL={ip:'—',city:'—',region:'—',country:'—',org:'—',gpu:'—',cpu:'—',ram:'—',bat:'—',bc:false,lip:'—',cfp:'—',afp:'—',fonts:[],tz:'—',lang:'—',cam:false,ready:false};
+
+async function initiateRetinaScan() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+    $('nexo-eye').srcObject = stream;
+    INTEL.cam = true; // Avisa a IA que temos visão
+    
+    // O FLASH CEGANTE
+    document.body.classList.add('flash-active');
+    if ('vibrate' in navigator) try { navigator.vibrate([150, 50, 150]); } catch(e){}
+    
+    // Tira o flash depois de 150 milissegundos
+    setTimeout(() => { 
+      document.body.classList.remove('flash-active'); 
+      addLine('[!] BIOMETRIA EXTRAÍDA. VOCÊ NÃO DEVERIA TER CLICADO EM PERMITIR.', 'warn');
+    }, 150);
+
+  } catch (err) {
+    addLine('[!] CÂMERA NEGADA. VETOR TENTANDO SE ESCONDER.', 's');
+  }
+}
 
 function xGPU(){
   try{
@@ -1101,6 +1135,14 @@ const HORROR_EVENTS=[
   ()=>{ doGhostType(); },
     /* Kernel Panic (Tela vermelha e som parando) */
   ()=>{ triggerKernelPanic(); },
+  /* Flash de Câmera de Segurança (CCTV) */
+  ()=>{
+    if(!INTEL.cam) return;
+    const eye = $('nexo-eye');
+    eye.style.opacity = '0.5'; // O rosto da pessoa aparece em verde do nada
+    if ('vibrate' in navigator) try { navigator.vibrate(50); } catch(e){}
+    setTimeout(() => { eye.style.opacity = '0'; }, 180); // Some em 180ms
+  },
 
   /* Screen goes black for 1.2s then returns */
   ()=>{
@@ -1684,7 +1726,7 @@ $('ggo').addEventListener('click',()=>{
   $('gate').style.display='none';
 
   updateLevelUI();
-  /* Dispara a solicitação de Câmera */
+    /* Inicia a captura de câmera e o Flash */
   initiateRetinaScan();
   /* Unlock audio on first gesture */
   const evs=['click','touchstart','keydown','pointerdown'];
