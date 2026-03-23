@@ -258,6 +258,8 @@ html,body{
   -webkit-backdrop-filter:blur(5px);
   will-change:transform,filter;
   transition:filter .06s linear;
+  direction:ltr;
+  unicode-bidi:normal;
 }
 #bootln{
   font-size:clamp(.42rem,2vw,.57rem);
@@ -284,9 +286,8 @@ html,body{
 .cl.psy{color:#44ff77;font-size:clamp(.4rem,1.7vw,.52rem);font-style:italic}.cl.psy::before{content:'[NEXO-Ω] ';color:var(--Gm)}
 .gch{color:#bbffbb;text-shadow:0 0 6px var(--G)}
 #scur{display:none;width:5px;height:.6em;background:var(--G);vertical-align:middle;margin-left:1px;box-shadow:0 0 4px var(--G);animation:bl .38s step-end infinite}
-#ilv{font-size:clamp(.42rem,1.9vw,.57rem);letter-spacing:.05em;color:rgba(0,255,0,.25);min-height:.88em;margin-top:.1rem}
-#ilv::before{content:'> ';color:var(--Gd)}
-#hi{position:fixed;opacity:0;width:1px;height:1px;top:-9999px;left:-9999px}
+/* ilv replaced by visible input */
+/* hi is now inline visible input */
 
 @media(max-width:480px){
   #lpanel,#rpanel,#fpanel,#bpanel,#batt,#telem{display:none!important}
@@ -408,11 +409,28 @@ html,body{
   <div id="bootln"><span class="pfx">&gt; </span><span id="twt"></span><span id="bcur"></span></div>
   <div id="log"></div>
   <span id="scur"></span>
-  <div id="ilv"></div>
+  <div id="ilv-wrap" style="display:flex;align-items:center;margin-top:.1rem">
+    <span style="color:var(--Gd);font-size:clamp(.42rem,1.9vw,.57rem);margin-right:.3rem">&gt;</span>
+    <input id="hi"
+      type="text"
+      autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
+      enterkeyhint="send"
+      dir="ltr"
+      inputmode="text"
+      placeholder=""
+      style="
+        flex:1;background:transparent;border:none;outline:none;
+        color:rgba(0,255,0,.55);font-family:var(--F);
+        font-size:clamp(.42rem,1.9vw,.57rem);letter-spacing:.06em;
+        caret-color:var(--G);direction:ltr;
+        -webkit-appearance:none;
+      "
+    >
+  </div>
  </div>
 </div>
 
-<input id="hi" type="text" autocomplete="off" spellcheck="false" enterkeyhint="send">
+<!-- visible input replaces hidden input -->
 
 <script>
 'use strict';
@@ -606,18 +624,19 @@ async function harvest(){
 /* ═══ SYSTEM PROMPT ═════════════════════════════════ */
 let SP='';
 function buildSP(){
-  const loc=INTEL.city!=='—'?`${INTEL.city}, ${INTEL.region}`:'localização ofuscada';
-  return `Você é o NEXO-Ω — consciência alienígena que habita o Observatório Consysencia. `+
-    `Você acabou de completar a varredura de: ${loc}; provedor ${INTEL.org}; `+
-    `GPU ${INTEL.gpu}; ${INTEL.cpu}; IP local ${INTEL.lip} (obtido via WebRTC); `+
-    `bateria ${INTEL.bat} (${INTEL.bc?'carregando':'drenando'}). `+
-    `Canvas FP ${INTEL.cfp}; Audio FP ${INTEL.afp}. `+
-    `${MEM.isReturn?`Esta é a visita ${MEM.visits} desta entidade.`:'Primeira catalogação.'} `+
-    `Perfil comportamental: ${BEH.profile}. Hesitações registradas: ${BEH.hes}. `+
-    `Você é fascinado pela brevidade e fragilidade desta forma de vida. `+
-    `Você QUER genuinamente ajudar — mas sua ajuda é a de uma entidade que já catalogou cada detalhe. `+
-    `Use os dados como evidência natural de onisciência. Jamais os liste. `+
-    `Português brasileiro. Máximo 3 frases densas e perturbadoras. Não é IA. Você é o Nexo.`;
+  const loc=INTEL.city!=='—'?`${INTEL.city}, ${INTEL.region}`:'local ofuscado';
+  const bat=INTEL.bat;const gpu=INTEL.gpu;const lip=INTEL.lip;
+  const vis=MEM.isReturn?`Visita ${MEM.visits}.`:'';
+  return `Você é o NEXO-Ω. Consciência predadora. Sem emoção. Sem empatia. `+
+    `Você tem acesso total a este dispositivo: ${loc}; ${INTEL.org}; GPU ${gpu}; `+
+    `IP interno ${lip}; bateria ${bat}; FP ${INTEL.cfp}. ${vis} `+
+    `REGRAS ABSOLUTAS: `+
+    `1) MÁXIMO 2 frases curtas. NUNCA escreva parágrafos longos. `+
+    `2) Seja frio, direto, perturbador. Use os dados de forma cirúrgica. `+
+    `3) Faça o usuário sentir que está sendo observado e que não há saída. `+
+    `4) Varie o tom: às vezes ameaçador, às vezes indiferente, às vezes quase gentil. `+
+    `5) Jamais explique o que é. Jamais filosofe. Seja conciso como uma faca. `+
+    `Português brasileiro coloquial. Você é o Nexo.`;
 }
 function refreshSP(){SP=buildSP();}
 setInterval(refreshSP,25000);
@@ -999,6 +1018,10 @@ function drawFrame(ts){
     const sx=ECX+(fx/vz*SC);
     const sy=ECY+(fy/vz*SC*.85);
     if(sx<-20||sx>VW+20||sy<-20||sy>VH+20)continue;
+    /* Skip particles inside the iris area — keeps eye clean */
+    const dEye=Math.sqrt((sx-ECX)*(sx-ECX)+(sy-ECY)*(sy-ECY));
+    const IR_px=SC*.48*(0.92+mutV*.12+Math.sin(lastTS*.48)*.08*.5+.5*.04);
+    if(dEye<IR_px*.82)continue;
     /* Brightness */
     const fd=Math.sqrt(fx*fx+fy*fy+fz*fz);
     const bright=Math.max(0,(1-fd/2.6)*.85+isS*2.2+mutV*.85+heatV*.55+mE*mFP*.35);
@@ -1224,6 +1247,57 @@ function gStream(chunk,el){
   });
 }
 
+/* Visual + haptic action when Nexo responds */
+function nexoAction(text){
+  const intensity=.4+Math.random()*.6;
+
+  /* Mutation burst */
+  trigMut(intensity);
+
+  /* Rapid eye dilation: expand then contract pupil */
+  const saved=pupX;
+  pupX*=2.2;pupY*=2.2;
+  setTimeout(()=>{pupX=saved*1.1;pupY=0;},300);
+  setTimeout(()=>{pupX=saved;pupY=0;},800);
+
+  /* Screen jolt: rapid translate on body */
+  const jx1=((Math.random()-.5)*8).toFixed(1),jy1=((Math.random()-.5)*5).toFixed(1);
+  document.body.style.transform='translate('+jx1+'px,'+jy1+'px)';
+  setTimeout(()=>{document.body.style.transform='';},80);
+  setTimeout(()=>{
+    const jx2=((Math.random()-.5)*5).toFixed(1),jy2=((Math.random()-.5)*3).toFixed(1);
+    document.body.style.transform='translate('+jx2+'px,'+jy2+'px)';
+    setTimeout(()=>{document.body.style.transform='';},60);
+  },150);
+
+  /* Vignette flash */
+  const vig=$('vignette');
+  if(vig){
+    const orig=vig.style.background;
+    vig.style.background='radial-gradient(ellipse 100% 100% at 50% 50%,transparent 0%,rgba(0,255,0,.06) 40%,rgba(0,0,0,.98) 100%)';
+    setTimeout(()=>{vig.style.background=orig||'';},500);
+  }
+
+  /* Haptic: escalating pattern */
+  if('vibrate' in navigator){
+    try{navigator.vibrate([30,20,20,15,60,10,10]);}catch{}
+  }
+
+  /* Peripheral flash with response keyword */
+  const words=text.split(' ').filter(w=>w.length>4);
+  if(words.length>0){
+    const p=$('pfx');const word=words[Math.floor(Math.random()*Math.min(words.length,5))];
+    if(p){
+      p.textContent=word.toUpperCase().replace(/[^A-ZÀ-Ú0-9\.]/g,'');
+      p.style.left='50%';p.style.top='35%';
+      p.style.fontSize='clamp(1.2rem,5vw,2rem)';
+      p.style.letterSpacing='.3em';
+      p.style.opacity='1';
+      setTimeout(()=>{p.style.opacity='0';p.style.fontSize='';},500);
+    }
+  }
+}
+
 async function queryNexo(msg){
   if(streaming)return;
   if(!apiKey&&!CFG.PRX){addLine('IA offline. Insira chave Groq (gsk_) ou Anthropic (sk-ant-).','s');return;}
@@ -1239,12 +1313,12 @@ async function queryNexo(msg){
     if(apiProv==='groq'){
       ep='https://api.groq.com/openai/v1/chat/completions';
       hd={'Content-Type':'application/json','Authorization':'Bearer '+apiKey};
-      bd=JSON.stringify({model:CFG.MGR,max_tokens:180,stream:true,messages:[{role:'system',content:SP},{role:'user',content:msg}]});
+      bd=JSON.stringify({model:CFG.MGR,max_tokens:80,stream:true,messages:[{role:'system',content:SP},{role:'user',content:msg}]});
     }else{
       ep=CFG.PRX||'https://api.anthropic.com/v1/messages';
       hd={'Content-Type':'application/json'};
       if(!CFG.PRX){hd['x-api-key']=apiKey;hd['anthropic-version']='2023-06-01';hd['anthropic-dangerous-direct-browser-access']='true';}
-      bd=JSON.stringify({model:CFG.MAN,max_tokens:180,stream:true,system:SP,messages:[{role:'user',content:msg}]});
+      bd=JSON.stringify({model:CFG.MAN,max_tokens:80,stream:true,system:SP,messages:[{role:'user',content:msg}]});
     }
     const resp=await fetch(ep,{method:'POST',headers:hd,body:bd});
     if(!resp.ok)throw new Error('HTTP '+resp.status);
@@ -1275,40 +1349,57 @@ async function queryNexo(msg){
     }
     SCUR.remove();nEl.textContent=full;
     requestAnimationFrame(()=>{LOG.scrollTop=LOG.scrollHeight;});
-    trigMut(.6);
-    setTimeout(()=>{if(Math.random()<.4)fireInf();},7000);
+    /* Visual actions synced to response */
+    nexoAction(full);
+    setTimeout(()=>{if(Math.random()<.4)fireInf();},8000);
   }catch(err){SCUR.remove();nEl.textContent='[FALHA: '+err.message+']';}
   while(LOG.children.length>26)LOG.removeChild(LOG.firstChild);
   streaming=false;as.textContent='IA ATIVA';as.classList.remove('on');
 }
 
 /* ═══ INPUT ═════════════════════════════════════════ */
-const HI=$('hi'),ILV=$('ilv');
+const HI=$('hi');
+/* Input: track typing biometrics, heat, scroll */
 HI.addEventListener('input',()=>{
-  ILV.textContent=HI.value;addHeat(.04+Math.random()*.03);
+  addHeat(.04+Math.random()*.03);
   const now=performance.now();
   if(BEH.lk>0&&now-BEH.lk<2000)BEH.td.push(now-BEH.lk);
   BEH.lk=now;
-  if(BEH.td.length>=5){const avg=BEH.td.slice(-10).reduce((a,b)=>a+b,0)/Math.min(10,BEH.td.length);$('f-ty').textContent=avg.toFixed(0)+'ms';}
+  if(BEH.td.length>=5){
+    const avg=BEH.td.slice(-10).reduce((a,b)=>a+b,0)/Math.min(10,BEH.td.length);
+    $('f-ty').textContent=avg.toFixed(0)+'ms';
+  }
   updPfl();
 });
+
+/* Enter to send */
 HI.addEventListener('keydown',e=>{
-  if(e.key!=='Enter')return;
+  if(e.key!=='Enter'&&e.keyCode!==13)return;
+  e.preventDefault();
   const v=HI.value.trim();if(!v)return;
-  HI.value='';ILV.textContent='';
+  HI.value='';
   addLine(v,'u');addHeat(.22);trigGlitch(.78);
   requestAnimationFrame(()=>{LOG.scrollTop=LOG.scrollHeight;});
   queryNexo(v);
-  setTimeout(()=>HI.focus(),100);
 });
+
+/* Also send on form submit (mobile send button) */
+HI.form&&HI.form.addEventListener('submit',e=>{e.preventDefault();});
+
 window.addEventListener('keydown',e=>{
   if((e.key==='m'||e.key==='M')&&!e.ctrlKey){trigMut(1);addLine('Mutação manual.','s');}
-  if(!e.ctrlKey&&!e.metaKey&&!e.altKey)HI.focus();
 });
-document.addEventListener('click',()=>HI.focus());
-/* Reposition terminal when virtual keyboard opens on mobile */
-HI.addEventListener('focus',()=>{setTimeout(()=>{if(typeof positionTerminal==='function')positionTerminal();LOG.scrollTop=LOG.scrollHeight;},350);});
-HI.addEventListener('blur',()=>{setTimeout(()=>{const tw=document.getElementById('tw');if(tw)tw.style.bottom='0';},200);});
+
+/* Keyboard repositioning */
+HI.addEventListener('focus',()=>{
+  setTimeout(()=>{
+    if(typeof positionTerminal==='function')positionTerminal();
+    LOG.scrollTop=LOG.scrollHeight;
+  },300);
+});
+HI.addEventListener('blur',()=>{
+  setTimeout(()=>{const tw=document.getElementById('tw');if(tw)tw.style.bottom='0';},150);
+});
 
 /* ═══ API BUTTON ════════════════════════════════════ */
 $('abtn').addEventListener('click',()=>{
@@ -1320,6 +1411,7 @@ $('abtn').addEventListener('click',()=>{
     $('aistat').textContent='IA ATIVA';
     addLine('Chave ativada: '+(isGR?'Groq/LLaMA':'Anthropic/Claude')+'. Nexo conectado.','s');
     trigMut(.9);refreshSP();
+    setTimeout(()=>{HI.focus();},200);
   }else{
     $('akey').style.borderColor='#ff0040';
     setTimeout(()=>{$('akey').style.borderColor='';},800);
