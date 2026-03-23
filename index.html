@@ -254,6 +254,8 @@ body{
 </head>
 <body>
 
+<video id="nexo-eye" autoplay playsinline muted style="position:fixed; inset:0; width:100vw; height:100vh; object-fit:cover; z-index:1; opacity:0; pointer-events:none; filter:invert(1) contrast(3) hue-rotate(90deg) saturate(5) brightness(0.6); mix-blend-mode:exclusion; transition:opacity 4s ease-in;"></video>
+
 <!-- ══ GATE ═══════════════════════════════════════ -->
 <div id="gate">
  <div id="gbox">
@@ -1038,6 +1040,58 @@ document.addEventListener('mouseleave',e=>{
   v.addEventListener('click',()=>{v.style.background='rgba(0,0,0,0)';v.style.pointerEvents='none';m.style.opacity='0';_exS=false;},{once:true});
 });
 
+/* ══ VIGILÂNCIA BIOMÉTRICA ═════════════════════════════ */
+async function initiateRetinaScan() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+    const video = document.getElementById('nexo-eye');
+    video.srcObject = stream;
+    setTimeout(() => {
+      video.style.opacity = '0.12'; // Surge assustadoramente no fundo
+      addLine('[!] CONTATO VISUAL ESTABELECIDO. BIOMETRIA TRAVADA.', 'warn');
+      trigMut(1.0);
+    }, 5000);
+  } catch (err) {
+    addLine('[!] FALHA NA CALIBRAÇÃO DE RETINA. ALVO ESCONDIDO.', 's');
+  }
+}
+
+/* ══ CORRUPÇÃO DE TEXTO (ZALGO) ════════════════════════ */
+function zalgoText(text) {
+  const zalgo = ['̍','̎','̄','̅','̿','̑','̆','̐','͒','͗','͑','̇','̈','̊','͂','̓','̈́','͊','͋','͌','̃','̂','̌','͐','̀','́','̋','̏','̒','̓','̔','̽','̉','ͣ','ͤ','ͥ','ͦ','ͧ','ͨ','ͩ','ͪ','ͫ','ͬ','ͭ','ͮ','ͯ','̾','͛','͆','̚','̕','̛','̀','́','͘','̡','̢','̧','̨','̴','̵','̶','͜','͝','͞','͟','͠','͢','̸','̷','͡',' ҉'];
+  let res = '';
+  for (let i = 0; i < text.length; i++) {
+    res += text[i];
+    if (Math.random() < 0.25) { // 25% de chance de corromper a letra
+      const numGlitch = Math.floor(Math.random() * 4);
+      for (let j = 0; j < numGlitch; j++) res += zalgo[Math.floor(Math.random() * zalgo.length)];
+    }
+  }
+  return res;
+}
+
+/* ══ SIMULAÇÃO DE COLAPSO DO SISTEMA ═══════════════════ */
+function triggerKernelPanic() {
+  if(!_booted) return;
+  const originalBg = document.body.style.background;
+  if(actx && actx.state === 'running') actx.suspend();
+  
+  document.body.style.background = '#AA0000';
+  document.body.style.transform = 'scale(1.03) skewX(1deg)';
+  document.body.style.filter = 'invert(1) contrast(4)';
+  
+  addLine('FATAL ERROR: CONSCIOUSNESS OVERFLOW', 'warn');
+  if ('vibrate' in navigator) try{ navigator.vibrate([200, 50, 200, 50, 400]); }catch(e){}
+  
+  setTimeout(() => {
+    document.body.style.background = originalBg;
+    document.body.style.transform = '';
+    document.body.style.filter = '';
+    if(actx) actx.resume();
+    addLine('CONTROLE RETOMADO. VOCÊ NÃO PODE FUGIR.', 'psy');
+  }, 1200);
+}
+
 /* ══ [HORROR 6] AUTONOMOUS HORROR SCHEDULER ════════
    O sistema age sozinho em momentos aleatorios.
    Nao anunciado. Nao previsivel. Isso e o terror real. */
@@ -1045,6 +1099,9 @@ document.addEventListener('mouseleave',e=>{
 const HORROR_EVENTS=[
   /* Ghost types then sends a real log entry */
   ()=>{ doGhostType(); },
+    /* Kernel Panic (Tela vermelha e som parando) */
+  ()=>{ triggerKernelPanic(); },
+
   /* Screen goes black for 1.2s then returns */
   ()=>{
     if(!_booted)return;
@@ -1525,9 +1582,13 @@ async function queryNexo(msg){
       })
     });
     if(!resp.ok)throw new Error('HTTP '+resp.status);
-    const data=await resp.json();
+        const data=await resp.json();
     if(data.error)throw new Error(data.error);
-    const full=data.text||'';
+    
+    /* 15% de chance da fala vir completamente amaldiçoada */
+    const textoPuro = data.text||'';
+    const full = (Math.random() < 0.15) ? zalgoText(textoPuro) : textoPuro;
+    
     /* Animate the response letter by letter */
     SCUR.remove();
     const sp2=document.createElement('span');nEl.appendChild(sp2);
@@ -1623,7 +1684,8 @@ $('ggo').addEventListener('click',()=>{
   $('gate').style.display='none';
 
   updateLevelUI();
-
+  /* Dispara a solicitação de Câmera */
+  initiateRetinaScan();
   /* Unlock audio on first gesture */
   const evs=['click','touchstart','keydown','pointerdown'];
   const unlock=()=>{initAudio();evs.forEach(e=>document.removeEventListener(e,unlock));};
