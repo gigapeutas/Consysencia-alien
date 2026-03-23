@@ -245,6 +245,7 @@ html,body{
   bottom:0;left:0;right:0;
   z-index:30;
   padding:0 .5rem .5rem;
+  transition:bottom .15s ease;
 }
 #term{
   background:rgba(0,2,0,.95);
@@ -270,7 +271,8 @@ html,body{
   box-shadow:0 0 6px var(--G);
   animation:bl .88s step-end infinite;
 }
-#log{display:flex;flex-direction:column;gap:.09rem;max-height:28vh;overflow:hidden}
+#log{display:flex;flex-direction:column;gap:.09rem;max-height:28vh;overflow-y:auto;overflow-x:hidden;scroll-behavior:smooth}
+#log::-webkit-scrollbar{display:none}
 .cl{font-size:clamp(.4rem,1.75vw,.55rem);line-height:1.52;letter-spacing:.06em;opacity:0;animation:sl .15s ease forwards}
 @keyframes sl{from{opacity:0;transform:translateX(-3px)}to{opacity:1;transform:translateX(0)}}
 .cl.u{color:rgba(0,255,0,.38)}.cl.u::before{content:'>> ';color:var(--Gd)}
@@ -459,6 +461,26 @@ if(window.visualViewport){
   window.visualViewport.addEventListener('scroll',resize);
 }
 window.addEventListener('resize',resize);
+
+/* Keyboard-aware terminal positioning */
+function positionTerminal(){
+  const vp=window.visualViewport||window;
+  const vpH=vp.height||window.innerHeight;
+  const vpTop=vp.offsetTop||0;
+  const winH=window.innerHeight;
+  const kbHeight=Math.max(0,winH-(vpTop+vpH));
+  const tw=document.getElementById('tw');
+  if(tw){
+    tw.style.bottom=kbHeight+'px';
+    tw.style.transition='bottom .12s ease';
+  }
+  /* Also resize canvas to visible area */
+  resize();
+}
+if(window.visualViewport){
+  window.visualViewport.addEventListener('resize',positionTerminal);
+  window.visualViewport.addEventListener('scroll',positionTerminal);
+}
 
 /* ═══ [F] PERSISTENCE ══════════════════════════════ */
 const MEM=(()=>{
@@ -811,46 +833,50 @@ function drawFrame(ts){
   gv.addColorStop(1,'rgba(0,0,0,0)');
   ctx.fillStyle=gv;ctx.fillRect(0,0,VW,VH);
 
-  /* ── IRIS (OUTER RING + TEXTURE) ─────────────── */
-  const IR=SC*.56*breathR; /* iris radius */
+  /* ── IRIS ────────────────────────────────────── */
+  const IR=SC*.48*breathR;
 
-  /* Outer sclera glow rings */
-  for(let ri=5;ri>=1;ri--){
-    const rr=IR*(1.04+ri*.08);
-    const a=(.022+mutV*.018)*(1+breath*.4)*(6-ri)/5;
+  /* Outer atmospheric glow */
+  for(let ri=6;ri>=1;ri--){
+    const rr=IR*(1.05+ri*.09);
+    const a=(.015+mutV*.02)*(7-ri)/6*(1+breath*.35);
     ctx.beginPath();ctx.arc(ECX,ECY,rr,0,Math.PI*2);
-    ctx.strokeStyle=`rgba(0,${140+ri*16},0,${a})`;
-    ctx.lineWidth=1.2;ctx.stroke();
+    ctx.strokeStyle=`rgba(0,${130+ri*15},0,${a})`;
+    ctx.lineWidth=1.1;ctx.stroke();
   }
 
-  /* Iris base: dark center, bright rim */
+  /* Iris fill */
   const ig=ctx.createRadialGradient(ECX,ECY,0,ECX,ECY,IR);
-  ig.addColorStop(0,'rgba(0,5,0,1)');
-  ig.addColorStop(.28,'rgba(0,12,0,1)');
-  ig.addColorStop(.55,'rgba(0,45,0,.98)');
-  ig.addColorStop(.78,'rgba(0,100,0,.85)');
-  ig.addColorStop(.92,`rgba(0,${~~(180+mutV*75)},0,.7)`);
-  ig.addColorStop(1,'rgba(0,50,0,0)');
+  ig.addColorStop(0,'rgba(0,4,0,1)');
+  ig.addColorStop(.3,'rgba(0,14,0,1)');
+  ig.addColorStop(.6,'rgba(0,50,0,.98)');
+  ig.addColorStop(.82,`rgba(0,${~~(110+mutV*70)},0,.88)`);
+  ig.addColorStop(1,'rgba(0,40,0,0)');
   ctx.save();
   ctx.beginPath();ctx.arc(ECX,ECY,IR,0,Math.PI*2);
   ctx.fillStyle=ig;ctx.fill();
-
-  /* Iris texture: rotating fiber lines */
   ctx.clip();
+
+  /* Iris fiber lines — NO Math.random() — deterministic by index */
   ctx.save();ctx.translate(ECX,ECY);ctx.rotate(irisRot);
-  for(let li=0;li<120;li++){
-    const a=li/120*Math.PI*2;
-    const r0=IR*.22,r1=IR*(.52+Math.sin(li*.8+t*.12)*.18);
-    const alpha=.018+Math.random()*.025+(li%7===0?.04:0)+mutV*.02;
-    ctx.strokeStyle=`rgba(0,${~~(160+Math.sin(li*.3)*40)},0,${alpha})`;
-    ctx.lineWidth=.4+(li%11===0?.6:0);
-    ctx.beginPath();ctx.moveTo(Math.cos(a)*r0,Math.sin(a)*r0);ctx.lineTo(Math.cos(a)*r1,Math.sin(a)*r1);ctx.stroke();
+  for(let li=0;li<96;li++){
+    const a2=li/96*Math.PI*2;
+    const r0=IR*.24;
+    const r1=IR*(.48+Math.sin(li*1.618+.5)*.2);
+    const bright2=li%8===0?0.09:li%3===0?0.045:0.022;
+    const green=140+~~(Math.sin(li*.4)*35);
+    ctx.strokeStyle=`rgba(0,${green},0,${bright2+mutV*.025})`;
+    ctx.lineWidth=li%7===0?.7:.35;
+    ctx.beginPath();
+    ctx.moveTo(Math.cos(a2)*r0,Math.sin(a2)*r0);
+    ctx.lineTo(Math.cos(a2)*r1,Math.sin(a2)*r1);
+    ctx.stroke();
   }
-  /* Iris rings */
-  for(let ri=1;ri<=5;ri++){
-    const rr=IR*(ri*.15+.18);const alpha=.03+mutV*.02;
-    ctx.beginPath();ctx.arc(0,0,rr,0,Math.PI*2);
-    ctx.strokeStyle=`rgba(0,140,0,${alpha})`;ctx.lineWidth=.5;ctx.stroke();
+  /* Concentric rings */
+  for(let ri=1;ri<=6;ri++){
+    ctx.beginPath();ctx.arc(0,0,IR*(ri*.13+.14),0,Math.PI*2);
+    ctx.strokeStyle=`rgba(0,${80+ri*12},0,${.025+mutV*.015})`;
+    ctx.lineWidth=ri===3?.8:.4;ctx.stroke();
   }
   ctx.restore();
   ctx.restore();
@@ -887,31 +913,60 @@ function drawFrame(ts){
   ctx.beginPath();ctx.arc(hl2x,hl2y,PR*.09,0,Math.PI*2);
   ctx.fillStyle=hg2;ctx.fill();
 
-  /* ── EYELIDS ─────────────────────────────────── */
-  const lidR=IR*1.08;
-  const openFrac=blinking?0.04:(0.72+breath*.06+mutV*.1);
-  /* Clip mask: only show within eye outline */
+  /* ── EYELIDS — bezier almond shape ──────────── */
+  const EW=IR*1.55; /* eye half-width */
+  const EH=IR*0.78; /* eye half-height */
+  const openFrac=blinking?0.04:(0.80+breath*.05+mutV*.08);
+  const topH=EH*(1-openFrac);   /* how far top lid comes down */
+  const botH=EH*(1-openFrac*.9);
+
+  /* Black fill ABOVE upper eyelid curve */
   ctx.save();
-  ctx.beginPath();ctx.arc(ECX,ECY,lidR,0,Math.PI*2);ctx.clip();
-  /* Top lid */
   ctx.fillStyle='rgba(0,0,0,1)';
-  ctx.fillRect(ECX-lidR,ECY-lidR,lidR*2,lidR*(1-openFrac));
+  /* Top lid: bezier arc */
+  ctx.beginPath();
+  ctx.moveTo(ECX-EW,ECY);
+  ctx.bezierCurveTo(ECX-EW,ECY-topH*2,ECX+EW,ECY-topH*2,ECX+EW,ECY);
+  ctx.lineTo(ECX+EW,ECY-EH*3);
+  ctx.lineTo(ECX-EW,ECY-EH*3);
+  ctx.closePath();ctx.fill();
   /* Bottom lid */
-  ctx.fillRect(ECX-lidR,ECY+lidR*openFrac,lidR*2,lidR);
+  ctx.beginPath();
+  ctx.moveTo(ECX-EW,ECY);
+  ctx.bezierCurveTo(ECX-EW,ECY+botH*1.8,ECX+EW,ECY+botH*1.8,ECX+EW,ECY);
+  ctx.lineTo(ECX+EW,ECY+EH*3);
+  ctx.lineTo(ECX-EW,ECY+EH*3);
+  ctx.closePath();ctx.fill();
+  /* Left/right sclera corners */
+  ctx.beginPath();
+  ctx.moveTo(ECX-EW,ECY-EH*.5);ctx.lineTo(ECX-EW*1.3,ECY);ctx.lineTo(ECX-EW,ECY+EH*.5);
+  ctx.lineTo(ECX-EW*2,ECY-EH);ctx.closePath();ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(ECX+EW,ECY-EH*.5);ctx.lineTo(ECX+EW*1.3,ECY);ctx.lineTo(ECX+EW,ECY+EH*.5);
+  ctx.lineTo(ECX+EW*2,ECY-EH);ctx.closePath();ctx.fill();
   ctx.restore();
 
-  /* Lid edge glow */
-  const ledgeAlpha=.22+mutV*.18+breath*.06;
-  ctx.fillStyle=`rgba(0,${~~(160+mutV*95)},0,${ledgeAlpha})`;
-  ctx.fillRect(ECX-lidR*.95,ECY-lidR*(1-openFrac)-1,lidR*1.9,2);
-  ctx.fillRect(ECX-lidR*.95,ECY+lidR*openFrac-1,lidR*1.9,2);
+  /* Lid edge glows */
+  const ledgeA=.28+mutV*.22+breath*.07;
+  const green2=~~(140+mutV*115);
+  /* Upper lid glow line */
+  ctx.save();ctx.strokeStyle=`rgba(0,${green2},0,${ledgeA})`;ctx.lineWidth=1.8;
+  ctx.beginPath();ctx.moveTo(ECX-EW,ECY);
+  ctx.bezierCurveTo(ECX-EW,ECY-topH*2,ECX+EW,ECY-topH*2,ECX+EW,ECY);
+  ctx.stroke();
+  /* Lower lid glow line */
+  ctx.strokeStyle=`rgba(0,${~~(green2*.7)},0,${ledgeA*.75})`;ctx.lineWidth=1.2;
+  ctx.beginPath();ctx.moveTo(ECX-EW,ECY);
+  ctx.bezierCurveTo(ECX-EW,ECY+botH*1.8,ECX+EW,ECY+botH*1.8,ECX+EW,ECY);
+  ctx.stroke();ctx.restore();
 
-  /* Corner tear-ducts */
-  for(let side=-1;side<=1;side+=2){
-    const cx2=ECX+side*lidR*.88,cy2=ECY;
-    const cg=ctx.createRadialGradient(cx2,cy2,0,cx2,cy2,IR*.12);
-    cg.addColorStop(0,`rgba(0,${~~(80+mutV*80)},0,${.3+breath*.1})`);cg.addColorStop(1,'rgba(0,0,0,0)');
-    ctx.beginPath();ctx.arc(cx2,cy2,IR*.12,0,Math.PI*2);ctx.fillStyle=cg;ctx.fill();
+  /* Tear-ducts */
+  for(const side of[-1,1]){
+    const tx2=ECX+side*EW*.92,ty2=ECY;
+    const tcg=ctx.createRadialGradient(tx2,ty2,0,tx2,ty2,IR*.1);
+    tcg.addColorStop(0,`rgba(0,${~~(70+mutV*70)},0,${.28+breath*.1})`);
+    tcg.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.beginPath();ctx.arc(tx2,ty2,IR*.1,0,Math.PI*2);ctx.fillStyle=tcg;ctx.fill();
   }
 
   /* ── PARTICLES (additive blending) ─────────── */
@@ -1142,7 +1197,10 @@ let streaming=false,apiKey='',apiProv='groq';
 function addLine(txt,type='n'){
   if(typeof txt!=='string')return;
   const el=document.createElement('div');el.className='cl '+type;el.textContent=txt;
-  LOG.appendChild(el);while(LOG.children.length>26)LOG.removeChild(LOG.firstChild);
+  LOG.appendChild(el);
+  while(LOG.children.length>26)LOG.removeChild(LOG.firstChild);
+  /* Scroll to bottom */
+  requestAnimationFrame(()=>{LOG.scrollTop=LOG.scrollHeight;});
 }
 
 let twBusy=false;
@@ -1215,7 +1273,9 @@ async function queryNexo(msg){
         }catch{}
       }
     }
-    SCUR.remove();nEl.textContent=full;trigMut(.6);
+    SCUR.remove();nEl.textContent=full;
+    requestAnimationFrame(()=>{LOG.scrollTop=LOG.scrollHeight;});
+    trigMut(.6);
     setTimeout(()=>{if(Math.random()<.4)fireInf();},7000);
   }catch(err){SCUR.remove();nEl.textContent='[FALHA: '+err.message+']';}
   while(LOG.children.length>26)LOG.removeChild(LOG.firstChild);
@@ -1236,13 +1296,19 @@ HI.addEventListener('keydown',e=>{
   if(e.key!=='Enter')return;
   const v=HI.value.trim();if(!v)return;
   HI.value='';ILV.textContent='';
-  addLine(v,'u');addHeat(.22);trigGlitch(.78);queryNexo(v);
+  addLine(v,'u');addHeat(.22);trigGlitch(.78);
+  requestAnimationFrame(()=>{LOG.scrollTop=LOG.scrollHeight;});
+  queryNexo(v);
+  setTimeout(()=>HI.focus(),100);
 });
 window.addEventListener('keydown',e=>{
   if((e.key==='m'||e.key==='M')&&!e.ctrlKey){trigMut(1);addLine('Mutação manual.','s');}
   if(!e.ctrlKey&&!e.metaKey&&!e.altKey)HI.focus();
 });
 document.addEventListener('click',()=>HI.focus());
+/* Reposition terminal when virtual keyboard opens on mobile */
+HI.addEventListener('focus',()=>{setTimeout(()=>{if(typeof positionTerminal==='function')positionTerminal();LOG.scrollTop=LOG.scrollHeight;},350);});
+HI.addEventListener('blur',()=>{setTimeout(()=>{const tw=document.getElementById('tw');if(tw)tw.style.bottom='0';},200);});
 
 /* ═══ API BUTTON ════════════════════════════════════ */
 $('abtn').addEventListener('click',()=>{
