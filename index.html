@@ -322,7 +322,7 @@ body.flash-active * {
   <label id="gcrow"><input type="checkbox" id="gchk">
    <span id="gclbl">Li e compreendi. Consinto com tudo acima e confirmo que tenho 18+.</span>
   </label>
-  <button id="ggo">INICIAR ASSIMILAÇÃO</button>
+    <button id="ggo" onclick="window.iniciarARG(event)">INICIAR ASSIMILAÇÃO</button>
  </div>
 </div>
 
@@ -1832,43 +1832,41 @@ $('gchk').addEventListener('change',function(){
   this.checked ? $('ggo').classList.add('rdy') : $('ggo').classList.remove('rdy');
 });
 
-// 2. Controle do Botão de Iniciar
+// 2. Controle do Botão de Iniciar (Blindado)
 let assimilacaoIniciada = false;
 
-function iniciarARG() {
-  // Trava de Segurança: Se não está "rdy" (verde) ou já iniciou, ignora o toque
-  if (!$('ggo').classList.contains('rdy') || assimilacaoIniciada) return;
-  assimilacaoIniciada = true;
+window.iniciarARG = function(e) {
+  try {
+    // Trava de Segurança
+    if (!$('gchk').checked || assimilacaoIniciada) return;
+    assimilacaoIniciada = true;
 
-  $('gate').style.display='none';
+    $('gate').style.display='none';
 
-  updateLevelUI();
-  
-  /* Inicia a captura de câmera e o Flash */
-  initiateRetinaScan();
+    updateLevelUI();
+    
+    /* Inicia a captura de câmera e o Flash */
+    initiateRetinaScan();
 
-  /* Unlock audio on first gesture */
-  const evs=['click','touchstart','keydown','pointerdown'];
-  const unlock=()=>{initAudio();evs.forEach(ev=>document.removeEventListener(ev,unlock));};
-  evs.forEach(ev=>document.addEventListener(ev,unlock,{passive:true,once:true}));
+    /* Unlock audio on first gesture */
+    const evs=['click','touchstart','keydown','pointerdown'];
+    const unlock=()=>{initAudio();evs.forEach(ev=>document.removeEventListener(ev,unlock));};
+    evs.forEach(ev=>document.addEventListener(ev,unlock,{passive:true,once:true}));
 
-  requestAnimationFrame(drawFrame);
+    requestAnimationFrame(drawFrame);
 
-  /* Focus input after short delay */
-  setTimeout(()=>$('msg-input').focus(),500);
-  setTimeout(()=>$('msg-input').focus(),1400);
+    setTimeout(()=>$('msg-input').focus(),500);
+    setTimeout(()=>$('msg-input').focus(),1400);
 
-  harvest();
+    harvest();
 
-  window.NexoAPI={trigMut,trigGlitch,addLine,queryNexo,addHeat,fireInf,gainXP,showMission,checkMissionUnlock,curLvl};
-}
+    window.NexoAPI={trigMut,trigGlitch,addLine,queryNexo,addHeat,fireInf,gainXP,showMission,checkMissionUnlock,curLvl};
+  } catch (err) {
+    alert("ERRO CRÍTICO NEXO-Ω: " + err.message);
+    console.error(err);
+  }
+};
 
-// Mapeando eventos para Desktop e Mobile
-$('ggo').addEventListener('click', iniciarARG);
-$('ggo').addEventListener('touchstart', (e) => {
-  e.preventDefault(); // Previne o ghost click
-  iniciarARG();
-}, {passive: false});
 
 </script>
 </body>
