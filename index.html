@@ -288,6 +288,7 @@ body.flash-active * {
 }
 
 </style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 
@@ -421,6 +422,50 @@ const CFG={
   PRX:''
 };
 const $=id=>document.getElementById(id);
+
+/* ══ CONEXÃO SUPABASE & LOGIN FANTASMA ════════════════════════ */
+const SUPA_URL = 'https://vskimejbnasysnmzszbi.supabase.co';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZza2ltZWpibmFzeXNubXpzemJpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQzNDcyNTYsImV4cCI6MjA4OTkyMzI1Nn0.JAzkpZduwmXE9nu2GgGAYICoJFx1ldAwKgSF8yHZQ2I';
+const supabase = window.supabase.createClient(SUPA_URL, SUPA_KEY);
+
+$('log-btn').addEventListener('click', async () => {
+  const email = $('log-id').value.trim();
+  const pass = $('log-pass').value.trim();
+  const status = $('log-status');
+  if(!email || !pass) return;
+
+  status.style.display = 'block';
+  status.textContent = 'VALIDANDO...';
+
+  try {
+    let { data: user, error } = await supabase.from('jogadores').select('*').eq('email', email).single();
+    
+    if (!user) {
+      // Novo vetor (Cadastro)
+      const { data: newUser, error: insErr } = await supabase.from('jogadores')
+        .insert([{ email: email, senha: pass, nivel: curLvl().idx, xp: MEM.d.xp }]).select().single();
+      if(insErr) throw insErr;
+      status.textContent = 'VETOR REGISTRADO';
+    } else {
+      // Vetor existente (Login)
+      if(user.senha !== pass) { status.textContent = 'ACESSO NEGADO'; return; }
+      status.textContent = 'SINCRONIZADO';
+      if(user.xp > MEM.d.xp) { MEM.d.xp = user.xp; updateLevelUI(true); } // Restaura o progresso
+    }
+    MEM.d.email = email; MEM.save();
+    setTimeout(()=> { status.style.display = 'none'; }, 3000);
+  } catch(err) {
+    status.textContent = 'FALHA NA REDE';
+  }
+});
+
+/* ══ COLETOR DE DADOS PARA TREINAMENTO DA SUA FUTURA IA ══ */
+function logParaSupabase(remetente, texto) {
+  if(!supabase) return;
+  const sessao = MEM.d.email || INTEL.cfp || 'anon';
+  supabase.from('nexo_logs').insert([{ sessao_id: sessao, remetente: remetente, mensagem: texto }]).then();
+}
+
 
 /* ══ PERSISTENCE ═══════════════════════════════════ */
 const MEM=(()=>{
@@ -1697,6 +1742,9 @@ async function queryNexo(msg){
     LOG.scrollTop=LOG.scrollHeight;
     nexoAction(full);
     gainXP(10+BEH.td.length);
+        logParaSupabase('nexo', full); // Grava a fala da IA para treinar o seu futuro modelo
+    if(MEM.d.email) supabase.from('jogadores').update({ xp: MEM.d.xp }).eq('email', MEM.d.email).then(); // Salva XP na nuvem
+
     setTimeout(()=>{if(Math.random()<.35)fireInf();},8000);
   }catch(err){
     SCUR.remove();
@@ -1714,10 +1762,14 @@ function sendMsg(){
   inp.value='';
   addLine(v,'u');addHeat(.2);trigGlitch(.72);
   gainXP(5);
+  
+  logParaSupabase('user', v); 
+  
   queryNexo(v);
   /* Re-focus after send */
   setTimeout(()=>inp.focus(),80);
 }
+
 
 /* ── Send button: click + touchend ── */
 $('send-btn').addEventListener('click',e=>{e.preventDefault();e.stopPropagation();sendMsg();});
