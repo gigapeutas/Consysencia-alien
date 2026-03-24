@@ -1826,13 +1826,24 @@ function fireBoot(){
 }
 
 /* ══ GATE ════════════════════════════════════════════ */
+
+// 1. MANTENHA ESTA PARTE INTACTA (Controla o Checkbox):
 $('gchk').addEventListener('change',function(){
   $('ggo').disabled=!this.checked;
   this.checked?$('ggo').classList.add('rdy'):$('ggo').classList.remove('rdy');
 });
 
-$('ggo').addEventListener('click',()=>{
-  if(!$('gchk').checked)return;
+// 2. COLE O CÓDIGO NOVO AQUI (Controla o Botão de Iniciar):
+let assimilacaoIniciada = false;
+
+function iniciarARG(e) {
+  // Previne o duplo disparo fantasma em telas touch
+  if (e) e.preventDefault(); 
+  
+  // Se não marcou a caixa ou se já iniciou, aborta
+  if (!$('gchk').checked || assimilacaoIniciada) return;
+  assimilacaoIniciada = true;
+
   $('gate').style.display='none';
 
   updateLevelUI();
@@ -1841,8 +1852,8 @@ $('ggo').addEventListener('click',()=>{
 
   /* Unlock audio on first gesture */
   const evs=['click','touchstart','keydown','pointerdown'];
-  const unlock=()=>{initAudio();evs.forEach(e=>document.removeEventListener(e,unlock));};
-  evs.forEach(e=>document.addEventListener(e,unlock,{passive:true,once:true}));
+  const unlock=()=>{initAudio();evs.forEach(ev=>document.removeEventListener(ev,unlock));};
+  evs.forEach(ev=>document.addEventListener(ev,unlock,{passive:true,once:true}));
 
   requestAnimationFrame(drawFrame);
 
@@ -1853,7 +1864,12 @@ $('ggo').addEventListener('click',()=>{
   harvest();
 
   window.NexoAPI={trigMut,trigGlitch,addLine,queryNexo,addHeat,fireInf,gainXP,showMission,checkMissionUnlock,curLvl};
-});
+}
+
+// Mapeando os gatilhos para Desktop e Mobile
+$('ggo').addEventListener('click', iniciarARG);
+$('ggo').addEventListener('touchend', iniciarARG);
+
 </script>
 </body>
 </html>
