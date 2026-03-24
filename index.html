@@ -323,7 +323,6 @@ body.flash-active * {
    <span id="gclbl">Li e compreendi. Consinto com tudo acima e confirmo que tenho 18+.</span>
   </label>
   <button id="ggo">INICIAR ASSIMILAÇÃO</button>
-
  </div>
 </div>
 
@@ -1864,10 +1863,12 @@ function iniciarARG() {
   window.NexoAPI={trigMut,trigGlitch,addLine,queryNexo,addHeat,fireInf,gainXP,showMission,checkMissionUnlock,curLvl};
 }
 
-// O seu meta viewport desativa o zoom e remove o delay de 300ms nativo do mobile.
-// Portanto, apenas o evento 'click' padrão será perfeito, limpo e ativará a câmera corretamente.
+// Mapeando eventos para Desktop e Mobile
 $('ggo').addEventListener('click', iniciarARG);
-
+$('ggo').addEventListener('touchstart', (e) => {
+  e.preventDefault(); // Previne o ghost click
+  iniciarARG();
+}, {passive: false});
 
 </script>
 </body>
