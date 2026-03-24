@@ -322,7 +322,8 @@ body.flash-active * {
   <label id="gcrow"><input type="checkbox" id="gchk">
    <span id="gclbl">Li e compreendi. Consinto com tudo acima e confirmo que tenho 18+.</span>
   </label>
-  <button id="ggo" disabled>INICIAR ASSIMILAÇÃO</button>
+  <button id="ggo">INICIAR ASSIMILAÇÃO</button>
+
  </div>
 </div>
 
@@ -1827,26 +1828,23 @@ function fireBoot(){
 
 /* ══ GATE ════════════════════════════════════════════ */
 
-// 1. MANTENHA ESTA PARTE INTACTA (Controla o Checkbox):
+// 1. Controle visual do Checkbox
 $('gchk').addEventListener('change',function(){
-  $('ggo').disabled=!this.checked;
-  this.checked?$('ggo').classList.add('rdy'):$('ggo').classList.remove('rdy');
+  this.checked ? $('ggo').classList.add('rdy') : $('ggo').classList.remove('rdy');
 });
 
-// 2. COLE O CÓDIGO NOVO AQUI (Controla o Botão de Iniciar):
+// 2. Controle do Botão de Iniciar
 let assimilacaoIniciada = false;
 
-function iniciarARG(e) {
-  // Previne o duplo disparo fantasma em telas touch
-  if (e) e.preventDefault(); 
-  
-  // Se não marcou a caixa ou se já iniciou, aborta
-  if (!$('gchk').checked || assimilacaoIniciada) return;
+function iniciarARG() {
+  // Trava de Segurança: Se não está "rdy" (verde) ou já iniciou, ignora o toque
+  if (!$('ggo').classList.contains('rdy') || assimilacaoIniciada) return;
   assimilacaoIniciada = true;
 
   $('gate').style.display='none';
 
   updateLevelUI();
+  
   /* Inicia a captura de câmera e o Flash */
   initiateRetinaScan();
 
@@ -1866,9 +1864,10 @@ function iniciarARG(e) {
   window.NexoAPI={trigMut,trigGlitch,addLine,queryNexo,addHeat,fireInf,gainXP,showMission,checkMissionUnlock,curLvl};
 }
 
-// Mapeando os gatilhos para Desktop e Mobile
+// O seu meta viewport desativa o zoom e remove o delay de 300ms nativo do mobile.
+// Portanto, apenas o evento 'click' padrão será perfeito, limpo e ativará a câmera corretamente.
 $('ggo').addEventListener('click', iniciarARG);
-$('ggo').addEventListener('touchend', iniciarARG);
+
 
 </script>
 </body>
