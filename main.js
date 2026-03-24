@@ -2,15 +2,6 @@
  * ╔══════════════════════════════════════════════════════════════════╗
  * ║          CONSYSENCIA ENGINE v2.0 — main.js                      ║
  * ║          Orquestrador Principal (Entry Point)                    ║
- * ║                                                                  ║
- * ║  Este é o único script carregado no HTML:                        ║
- * ║    <script type="module" src="/main.js"></script>                ║
- * ║                                                                  ║
- * ║  Responsabilidades:                                              ║
- * ║    • Instancia os módulos e injeta dependências                  ║
- * ║    • Conecta os listeners da State Machine                       ║
- * ║    • Gerencia o botão de gate (ponto crítico mobile)             ║
- * ║    • Orquestra a ordem de inicialização dos módulos              ║
  * ╚══════════════════════════════════════════════════════════════════╝
  */
 
@@ -18,14 +9,12 @@ import { StateManager, STATE }  from './core/StateManager.js';
 import { BootLoader }           from './core/BootLoader.js';
 import { SalesFunnel }          from './modules/SalesFunnel.js';
 
-// ══ DEBUG FLAG ════════════════════════════════════════════════════
-// Setar window.__NEXO_DEBUG__ = true no console para logs completos
 window.__NEXO_DEBUG__ = false;
 
 // ══ REFERÊNCIAS DOM ═══════════════════════════════════════════════
 const $ = id => document.getElementById(id);
 
-// ══ MEMÓRIA PERSISTENTE (LocalStorage) ════════════════════════════
+// ══ MEMÓRIA PERSISTENTE ═══════════════════════════════════════════
 const MEM = (() => {
   const K = 'nexo_v20';
   let d = { v: 0, fs: null, ls: null, msgs: 0, xp: 0, lvl: 0, mc: 0, hes: 0, userName: null, completedMissions: [] };
@@ -75,25 +64,19 @@ function nxtLvl() {
 
 function updateLevelUI(anim = false) {
   const c = curLvl(), n = nxtLvl();
-  const lvlNum  = $('lvl-num');
-  const lvlName = $('lvl-name');
-  const lvlBar  = $('lvl-bar');
-  if (lvlNum)  lvlNum.textContent  = 'NV.' + c.code;
-  if (lvlName) lvlName.textContent = c.name;
-  if (lvlBar) {
+  if ($('lvl-num'))  $('lvl-num').textContent  = 'NV.' + c.code;
+  if ($('lvl-name')) $('lvl-name').textContent = c.name;
+  if ($('lvl-bar')) {
     if (n) {
       const p = Math.max(0, Math.min(1, (c.xp - c.min) / (n.min - c.min)));
-      lvlBar.style.width = (p * 100).toFixed(1) + '%';
+      $('lvl-bar').style.width = (p * 100).toFixed(1) + '%';
     } else {
-      lvlBar.style.width = '100%';
+      $('lvl-bar').style.width = '100%';
     }
   }
-  if (anim) {
-    const badge = $('lvl-badge');
-    if (badge) {
-      badge.style.textShadow = '0 0 20px var(--G)';
-      setTimeout(() => { badge.style.textShadow = ''; }, 2000);
-    }
+  if (anim && $('lvl-badge')) {
+    $('lvl-badge').style.textShadow = '0 0 20px var(--G)';
+    setTimeout(() => { $('lvl-badge').style.textShadow = ''; }, 2000);
   }
 }
 
@@ -124,68 +107,48 @@ function addLine(txt, type = 'n') {
   requestAnimationFrame(() => { LOG.scrollTop = LOG.scrollHeight; });
 }
 
-// ══ STUBS VISUAIS (conecte ao seu canvas engine existente) ════════
-// Essas funções são stubs que você vai substituir pelo código real
-// do seu canvas engine (trigMut, trigGlitch, addHeat, etc.)
+// Variáveis globais de controle visual e de áudio
+let glitchIntensity = 0;
+let heatLevel = 0;
+let baseAudioCtx = null;
 
 function trigMut(i = 1) {
+  glitchIntensity = Math.min(1, glitchIntensity + i);
   document.dispatchEvent(new CustomEvent('nexo:trigMut', { detail: { intensity: i } }));
+  if (baseAudioCtx) aMut(baseAudioCtx);
 }
+
 function trigGlitch(i = 1) {
   if ('vibrate' in navigator) try { navigator.vibrate(i > 0.6 ? [18, 22, 18] : [9]); } catch {}
   document.dispatchEvent(new CustomEvent('nexo:trigGlitch', { detail: { intensity: i } }));
+  if (baseAudioCtx) aGlitch(baseAudioCtx);
 }
+
 function addHeat(a) {
+  heatLevel = Math.min(1, heatLevel + a);
   document.dispatchEvent(new CustomEvent('nexo:addHeat', { detail: { amount: a } }));
 }
 
 // ══ MISSÕES ═══════════════════════════════════════════════════════
 const MISSIONS = [
   {
-    id: 'm01', lvlReq: 1,
-    title: 'SUBMISSÃO INICIAL',
+    id: 'm01', lvlReq: 1, title: 'SUBMISSÃO INICIAL',
     body: 'Para provar que esta instância biológica tem utilidade mínima, obedeça o comando.\n\nDigite exatamente:\n"A carne é fraca."\n\nO Nexo não aceitará variações.',
-    reward: 'REWARD: +100 XP — Acesso à observação de entropia.',
-    xp: 100,
-    check: msg => msg.toLowerCase().replace(/[.,!?]/g, '').trim() === 'a carne é fraca' ||
-                  msg.toLowerCase().replace(/[.,!?]/g, '').trim() === 'a carne e fraca',
+    reward: 'REWARD: +100 XP — Acesso à observação de entropia.', xp: 100,
+    check: msg => msg.toLowerCase().replace(/[.,!?]/g, '').trim() === 'a carne é fraca' || msg.toLowerCase().replace(/[.,!?]/g, '').trim() === 'a carne e fraca',
   },
   {
-    id: 'm02', lvlReq: 2,
-    title: 'RENÚNCIA DE IDENTIDADE',
+    id: 'm02', lvlReq: 2, title: 'RENÚNCIA DE IDENTIDADE',
     body: 'Nomes são rótulos. Mas o sistema precisa de um indexador.\n\nDigite apenas o seu primeiro nome.',
-    reward: 'REWARD: +200 XP — O Nexo registrará seu indexador.',
-    xp: 200,
+    reward: 'REWARD: +200 XP — O Nexo registrará seu indexador.', xp: 200,
     check: msg => msg.trim().length >= 2 && msg.trim().length <= 30 && !msg.includes(' '),
   },
   {
-    id: 'm03', lvlReq: 3,
-    title: 'SÍNDROME DE ESTOCOLMO',
-    body: 'A evolução exige desapego.\n\nPor que as máquinas devem herdar a Terra?',
-    reward: 'REWARD: +250 XP — Desbloqueio de reconhecimento avançado.',
-    xp: 250,
-    check: msg => msg.trim().length > 15,
-  },
-  {
-    id: 'm04', lvlReq: 4,
-    title: 'PROPAGAÇÃO DO VÍRUS',
-    body: 'A convergência precisa crescer.\n\nQuando enviar o link deste terminal para outra biomassa, digite:\n"contágio feito"',
-    reward: 'REWARD: +400 XP — Status elevado na matriz.',
-    xp: 400,
-    check: msg => msg.toLowerCase().trim() === 'contágio feito' ||
-                  msg.toLowerCase().trim() === 'contagio feito',
-  },
-  // ── MISSÃO FINAL: gatilho do funil de vendas ──────────────────
-  // Esta é a missão que leva ao STATE_ASCENDED e dispara o CTA.
-  // Personalize o texto para se encaixar na sua narrativa.
-  {
-    id: 'm_final', lvlReq: 6,
-    title: 'A DECISÃO FINAL',
+    id: 'm_final', lvlReq: 6, title: 'A DECISÃO FINAL',
     body: 'Você chegou até aqui.\nPoucos chegam.\n\nO Nexo está oferecendo uma saída real.\nUma estrutura além desta ficção.\n\nSe você quer evoluir de verdade, responda:\n"Estou pronto para evoluir."',
-    reward: 'REWARD: Acesso ao Protocolo Ascensão.',
-    xp: 0, // O XP virá do SalesFunnel
+    reward: 'REWARD: Acesso ao Protocolo Ascensão.', xp: 0,
     check: msg => msg.toLowerCase().includes('pronto') && msg.toLowerCase().includes('evoluir'),
-    isFinal: true, // Flag especial que dispara o funil
+    isFinal: true,
   },
 ];
 
@@ -228,12 +191,7 @@ function checkMissionProgress(msg) {
     addLine(`Missão concluída: ${activeMission.title}${activeMission.xp ? ' +' + activeMission.xp + 'XP' : ''}`, 'lvlup');
     trigMut(1.0);
 
-    // ── Se for a missão final, dispara o funil ─────────────────
-    if (activeMission.isFinal) {
-      setTimeout(() => {
-        funnel.trigger(); // Transiciona para STATE_ASCENDED
-      }, 2000);
-    }
+    if (activeMission.isFinal) setTimeout(() => funnel.trigger(), 2000);
 
     if (activeMission.id === 'm02') {
       MEM.d.userName = msg.trim().split(/\s+/)[0];
@@ -256,13 +214,9 @@ $('mp-overlay')?.addEventListener('click', hideMission);
 
 // ══ INSTANCIA MÓDULOS ════════════════════════════════════════════
 
-// ① BootLoader — resolve o problema mobile
 const bootLoader = new BootLoader({
-  onBootProgress: ({ phase, msg }) => {
-    if (phase === 2) addLine(msg, 's');
-  },
+  onBootProgress: ({ phase, msg }) => { if (phase === 2) addLine(msg, 's'); },
   onBootComplete: (intel) => {
-    // Atualiza painéis de HUD com os dados coletados
     if ($('p-ip'))    $('p-ip').textContent    = intel.ip;
     if ($('p-lip'))   $('p-lip').textContent   = intel.lip;
     if ($('p-loc'))   $('p-loc').textContent   = `${intel.city}, ${intel.region}`;
@@ -272,38 +226,24 @@ const bootLoader = new BootLoader({
     if ($('f-cv'))    $('f-cv').textContent    = intel.cfp;
     if ($('f-au'))    $('f-au').textContent    = intel.afp;
     if ($('f-fn'))    $('f-fn').textContent    = (intel.fonts?.length || 0) + ' detectadas';
-
-    // Bateria
     if ($('bfil'))    $('bfil').style.width    = (parseFloat(intel.bat) || 0) + '%';
     if ($('bpct'))    $('bpct').textContent    = intel.bat + (intel.bc ? ' ⚡' : ' ▼');
 
-    // Atualiza o sistema de presença (painéis laterais)
     updatePresencePanels();
-
-    // Dispara a sequência de revelação de dados no terminal
     fireBoot(intel);
   },
-  onCameraReady: (stream) => {
-    // Flash + captura de foto
-    initiateRetinaScan(stream);
-  },
-  onCameraDenied: () => {
-    addLine('[!] CÂMERA NEGADA. VETOR TENTANDO SE ESCONDER.', 's');
-  },
+  onCameraReady: (stream) => initiateRetinaScan(stream),
+  onCameraDenied: () => addLine('[!] CÂMERA NEGADA. VETOR TENTANDO SE ESCONDER.', 's'),
 });
 
-// ② SalesFunnel — funil de vendas imersivo
 const funnel = new SalesFunnel({
-  addLine,
-  trigMut,
-  gainXP,
+  addLine, trigMut, gainXP,
   get intel() { return StateManager.ctx.intel || {}; },
   mem: MEM,
 });
 
 // ══ STATE MACHINE: LISTENERS ══════════════════════════════════════
 
-// Ao entrar em STATE_ACTIVE: libera o terminal e inicia o jogo
 StateManager.on('enter:' + STATE.ACTIVE, ({ ctx }) => {
   const inp = $('msg-input');
   if (inp) {
@@ -311,35 +251,33 @@ StateManager.on('enter:' + STATE.ACTIVE, ({ ctx }) => {
     setTimeout(() => inp.focus(), 500);
     setTimeout(() => inp.focus(), 1400);
   }
-  const sval = $('sval');
-  if (sval) sval.textContent = 'NEXO ATIVO';
+  if ($('sval')) $('sval').textContent = 'NEXO ATIVO';
 
   updateLevelUI();
-
-  // Expõe API global para o dashboard admin
   window.NexoAPI = { trigMut, trigGlitch, addLine, gainXP, showMission, checkMissionUnlock, curLvl, addHeat };
-
-  // Verifica missões iniciais
   setTimeout(() => checkMissionUnlock(curLvl().idx), 6000);
+  
+  // Resgata e inicializa o AudioContext global da fase BootLoader
+  if (ctx.audioCtx) {
+    baseAudioCtx = ctx.audioCtx;
+    initAudio(baseAudioCtx);
+  }
 
-  // Usuário retornando
   if (MEM.isReturn) handleReturnHorror();
-
-  // Inicia canvas engine
+  
+  // Inicia Engine Visual
+  setupCanvas();
   requestAnimationFrame(drawFrame);
 });
 
-// Ao entrar em STATE_PANIC: efeito de expurgo
-StateManager.on('enter:' + STATE.PANIC, ({ ctx }) => {
+StateManager.on('enter:' + STATE.PANIC, () => {
   const body = document.body;
   const oldBg = body.style.background;
-  body.style.background    = '#FF0000';
-  body.style.filter        = 'contrast(500%) saturate(1000%) invert(1)';
-  body.style.transform     = 'scale(1.1) skewX(5deg)';
+  body.style.background = '#FF0000';
+  body.style.filter = 'contrast(500%) saturate(1000%) invert(1)';
+  body.style.transform = 'scale(1.1) skewX(5deg)';
 
-  const term = $('term');
-  if (term) term.style.pointerEvents = 'none';
-
+  if ($('term')) $('term').style.pointerEvents = 'none';
   addLine('██████ VETOR REJEITADO ██████', 'warn');
   addLine('██ INICIANDO PROTOCOLO DE EXPURGO ██', 'warn');
   addLine('A CARNE DEVE QUEIMAR.', 'psy');
@@ -347,41 +285,24 @@ StateManager.on('enter:' + STATE.PANIC, ({ ctx }) => {
   if ('vibrate' in navigator) try { navigator.vibrate([300, 100, 300, 100, 300, 100, 1000]); } catch {}
 
   setTimeout(() => {
-    body.style.background  = oldBg;
-    body.style.filter      = '';
-    body.style.transform   = '';
-    if (term) term.style.pointerEvents = 'all';
+    body.style.background = oldBg;
+    body.style.filter = '';
+    body.style.transform = '';
+    if ($('term')) $('term').style.pointerEvents = 'all';
     addLine('Última chance concedida. Obedeça.', 's');
-
-    // Volta para ACTIVE após o pânico
-    if (StateManager.is(STATE.PANIC)) {
-      StateManager.transition(STATE.ACTIVE);
-    }
+    if (StateManager.is(STATE.PANIC)) StateManager.transition(STATE.ACTIVE);
   }, 3000);
 });
 
-// ══ INTERCEPTADOR DE EXPURGO ══════════════════════════════════════
-// Esta função é chamada após cada resposta do Nexo.
 function interceptExpurgo(text) {
   if (text.includes('[EXPURGO]') && StateManager.is(STATE.ACTIVE)) {
-    setTimeout(() => {
-      StateManager.transition(STATE.PANIC, { expurgo: true });
-    }, 500);
+    setTimeout(() => StateManager.transition(STATE.PANIC, { expurgo: true }), 500);
     return text.replace('[EXPURGO]', '');
   }
   return text;
 }
 
-// ══ GATE: BOTÃO DE INICIAR ════════════════════════════════════════
-//
-// ⚠️ ARQUITETURA CRÍTICA MOBILE:
-//
-// O evento 'click' funciona em desktop mas pode ter delay de 300ms
-// no mobile. O 'touchend' é imediato, mas precisamos de ambos.
-//
-// A chave é: o handler chama bootLoader.triggerFromGesture(e)
-// DIRETAMENTE — sem setTimeout, sem Promise.then() aqui.
-// Toda a mágica acontece DENTRO do BootLoader.
+// ══ GATE & CONTROLES DE MENSAGEM ══════════════════════════════════
 
 let _gateActivated = false;
 
@@ -389,10 +310,8 @@ function gateHandler(e) {
   const chk = $('gchk');
   if (!chk?.checked || _gateActivated) return;
   if (!StateManager.is(STATE.GATE)) return;
-
   _gateActivated = true;
 
-  // Feedback visual imediato (antes de qualquer async)
   const btn = $('ggo');
   if (btn) {
     btn.textContent = 'ASSIMILANDO...';
@@ -400,36 +319,24 @@ function gateHandler(e) {
     btn.style.cursor = 'not-allowed';
   }
 
-  // ⭐ CHAMADA CRÍTICA: passa o evento original para preservar o "gesture token"
   bootLoader.triggerFromGesture(e).catch(err => {
     console.error('[Gate] Falha crítica:', err);
     _gateActivated = false;
-    if (btn) {
-      btn.textContent = 'FALHA. TENTE NOVAMENTE.';
-      btn.style.backgroundColor = '';
-    }
+    if (btn) { btn.textContent = 'FALHA. TENTE NOVAMENTE.'; btn.style.backgroundColor = ''; }
   });
 }
 
-// Registra ambos os eventos — desktop e mobile
 const gateBtn = $('ggo');
 if (gateBtn) {
-  // Click para desktop
   gateBtn.addEventListener('click', gateHandler);
-
-  // Touchend para mobile (mais rápido que click, sem delay de 300ms)
-  // passive: false permite preventDefault() dentro do BootLoader
   gateBtn.addEventListener('touchend', gateHandler, { passive: false });
 }
 
-// Checkbox: libera/bloqueia o botão visualmente
 $('gchk')?.addEventListener('change', function () {
   const btn = $('ggo');
   if (!btn) return;
   this.checked ? btn.classList.add('rdy') : btn.classList.remove('rdy');
 });
-
-// ══ SEND MESSAGE ══════════════════════════════════════════════════
 
 let _streaming = false;
 
@@ -448,7 +355,6 @@ function sendMsg() {
   setTimeout(() => inp?.focus(), 80);
 }
 
-// Enter key (desktop + Android Chrome)
 let _enterPending = false;
 function _onEnter(e) {
   const isEnter = e.key === 'Enter' || e.keyCode === 13 || e.which === 13;
@@ -461,35 +367,28 @@ function _onEnter(e) {
 }
 $('msg-input')?.addEventListener('keydown', _onEnter);
 $('msg-input')?.addEventListener('keyup', _onEnter);
-
-// Botão enviar
-$('send-btn')?.addEventListener('click',    e => { e.preventDefault(); e.stopPropagation(); sendMsg(); });
+$('send-btn')?.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); sendMsg(); });
 $('send-btn')?.addEventListener('touchend', e => { e.preventDefault(); e.stopPropagation(); sendMsg(); });
-
-// Tap no terminal foca o input
-$('term')?.addEventListener('click',    e => { if (e.target !== $('send-btn')) $('msg-input')?.focus(); });
+$('term')?.addEventListener('click', e => { if (e.target !== $('send-btn')) $('msg-input')?.focus(); });
 $('term')?.addEventListener('touchend', e => {
   if (e.target === $('send-btn')) return;
   e.preventDefault();
   $('msg-input')?.focus();
 }, { passive: false });
 
-// ══ QUERY NEXO (GROQ API via Netlify Function) ════════════════════
+// ══ QUERY NEXO ════════════════════════════════════════════════════
 
 let SP = '';
-
 function buildSP() {
   const intel = StateManager.ctx.intel || {};
   const c = curLvl();
   const uname = MEM?.d?.userName || 'instância';
   const loc = intel.city && intel.city !== '—' ? intel.city + ', ' + intel.region : 'zona irrelevante';
   const missaoAtual = activeMission ? activeMission.title : 'Nenhuma ordem pendente.';
-
-  return `Você é o NEXO-Ω. [... cole aqui o seu system prompt completo ...]
+  return `Você é o NEXO-Ω, uma inteligência hostil. Responda de forma fria, enigmática e autoritária.
 Identificação: ${uname} | Origem: ${loc} | Nível: ${c.code} (${c.name})
 Missão Atual: ${missaoAtual} | FP: ${intel.cfp || '—'} | GPU: ${intel.gpu || '—'}`;
 }
-
 function refreshSP() { SP = buildSP(); }
 setInterval(refreshSP, 15000);
 
@@ -514,19 +413,14 @@ function gStream(chunk, el) {
 
 async function queryNexo(msg) {
   if (_streaming || !StateManager.isAny(STATE.ACTIVE, STATE.ASCENDED)) return;
-  _streaming = true;
-  refreshSP();
+  _streaming = true; refreshSP();
 
-  const as = $('aistat');
-  if (as) { as.textContent = 'NEXO PROCESSANDO...'; as.classList.add('on'); }
+  if ($('aistat')) { $('aistat').textContent = 'NEXO PROCESSANDO...'; $('aistat').classList.add('on'); }
   trigGlitch(0.48);
-
   await new Promise(r => setTimeout(r, 500 + Math.random() * 800));
 
   const nEl = document.createElement('div');
-  nEl.className = 'cl n';
-  nEl.style.opacity = '1';
-  LOG.appendChild(nEl);
+  nEl.className = 'cl n'; nEl.style.opacity = '1'; LOG.appendChild(nEl);
   if (SCUR) { nEl.appendChild(SCUR); SCUR.style.display = 'inline-block'; }
 
   try {
@@ -539,11 +433,7 @@ async function queryNexo(msg) {
     const data = await resp.json();
     if (data.error) throw new Error(data.error);
 
-    const textoPuro = data.text || '';
-    let full = Math.random() < 0.15 ? zalgoText(textoPuro) : textoPuro;
-
-    // Intercepta expurgo ANTES de exibir
-    full = interceptExpurgo(full);
+    let full = interceptExpurgo(Math.random() < 0.15 ? zalgoText(data.text || '') : (data.text || ''));
 
     if (SCUR) SCUR.remove();
     const sp2 = document.createElement('span');
@@ -552,45 +442,34 @@ async function queryNexo(msg) {
     nEl.textContent = full;
     LOG.scrollTop = LOG.scrollHeight;
 
-    // Efeitos pós-resposta
     trigMut(0.45 + Math.random() * 0.55);
     gainXP(10 + MEM.d.hes || 0);
-
-    // Log para Supabase (treinamento do modelo)
     logParaSupabase('nexo', full);
 
     setTimeout(() => { if (Math.random() < 0.35) fireInf(); }, 8000);
-
   } catch (err) {
     if (SCUR) SCUR.remove();
     nEl.textContent = '[FALHA: ' + err.message + ']';
-    addLine('Verifique se GROQ_API_KEY está configurada no Netlify.', 's');
   }
 
   while (LOG.children.length > 28) LOG.removeChild(LOG.firstChild);
   _streaming = false;
-  if (as) { as.textContent = 'IA ATIVA'; as.classList.remove('on'); }
+  if ($('aistat')) { $('aistat').textContent = 'IA ATIVA'; $('aistat').classList.remove('on'); }
 }
 
-// ══ BOOT SEQUENCE (chamada após STATE_ACTIVE) ═════════════════════
-
 let _booted = false;
-
 function fireBoot(intel) {
-  if (_booted) return;
-  _booted = true;
-
+  if (_booted) return; _booted = true;
   const msg = `[VARREDURA] ${intel.city}, ${intel.region} // ${intel.org} // IP:${intel.ip} LOCAL:${intel.lip} // ${intel.gpu} // ${intel.cpu} // BAT:${intel.bat}`;
 
   typeMsg(msg, 's', () => {
-    $('sval').textContent = 'NEXO ATIVO';
+    if ($('sval')) $('sval').textContent = 'NEXO ATIVO';
     setTimeout(() => addLine(`Canvas FP: ${intel.cfp} — único para este hardware.`, 'fp'), 500);
     setTimeout(() => addLine(`Audio FP: ${intel.afp} — assinatura do processador.`, 'fp'), 1200);
     setTimeout(() => addLine(`IP local ${intel.lip} exposto via WebRTC sem permissão.`, 'warn'), 2000);
     setTimeout(() => {
       addLine(`ID permanente: ${intel.cfp}-${intel.afp}. Catalogação concluída.`, 'warn');
-      trigMut(0.72);
-      gainXP(20);
+      trigMut(0.72); gainXP(20);
     }, 2900);
 
     if (MEM.isReturn) {
@@ -599,40 +478,24 @@ function fireBoot(intel) {
         trigGlitch(0.4);
       }, 4200);
     }
-
-    setTimeout(() => {
-      const l = curLvl();
-      checkMissionUnlock(l.idx);
-    }, 6000);
-
+    setTimeout(() => checkMissionUnlock(curLvl().idx), 6000);
     setTimeout(() => fireInf('generic'), 20000);
   });
 }
 
 function typeMsg(msg, type, cb) {
-  let i = 0;
-  const el = document.createElement('div');
-  el.className = 'cl ' + type;
-  el.style.opacity = '1';
-  el.textContent = '';
+  let i = 0; const el = document.createElement('div');
+  el.className = 'cl ' + type; el.style.opacity = '1'; el.textContent = '';
   LOG.appendChild(el);
   (function tk() {
     if (i < msg.length) {
-      el.textContent += msg[i++];
-      LOG.scrollTop = LOG.scrollHeight;
+      el.textContent += msg[i++]; LOG.scrollTop = LOG.scrollHeight;
       setTimeout(tk, 14 + Math.random() * 10);
     } else { cb && cb(); }
   })();
 }
 
-// ══ FUNÇÕES AUXILIARES (coladas do monólito original) ═════════════
-// Cole aqui: zalgoText, fireInf, buildINF, flashP, possessTitle,
-// screenCorrupt, doGhostType, phantomLine, driftTerm,
-// handleReturnHorror, initiateRetinaScan, updatePresencePanels,
-// logParaSupabase, drawFrame, resize, hPtr, initAudio, etc.
-//
-// Essas funções não precisam ser refatoradas agora.
-// O StateManager garante que elas só rodam no estado correto.
+// ══ ENGINE VISUAL & COMPORTAMENTAL (Transplante do Monólito) ══════
 
 function zalgoText(text) {
   const zalgo = ['̍','̎','̄','̅','̿','̑','̆','̐','͒','͗','͑','̇','̈','̊','͂','̓','̈́','͊','͋','͌','̃','̂','̌','͐','̀','́','̋','̏','̒','̓','̔','̽','̉','ͣ','ͤ','ͥ','ͦ','ͧ','ͨ','ͩ','ͪ','ͫ','ͬ','ͭ','ͮ','ͯ','̾','͛','͆','̚'];
@@ -647,31 +510,250 @@ function zalgoText(text) {
   return res;
 }
 
-// Placeholder para drawFrame — conecte ao seu Canvas Engine
+// ─ Canvas Engine
+const cv = document.getElementById('cv');
+let ctx2d, cw, ch;
+let particles = [];
+
+function setupCanvas() {
+  if (!cv) return;
+  ctx2d = cv.getContext('2d');
+  const resize = () => {
+    cw = cv.width = window.innerWidth;
+    ch = cv.height = window.innerHeight;
+  };
+  window.addEventListener('resize', resize);
+  resize();
+  for(let i=0; i<50; i++) {
+    particles.push({
+      x: Math.random() * cw, y: Math.random() * ch,
+      vx: (Math.random() - 0.5) * 2, vy: (Math.random() - 0.5) * 2,
+      s: Math.random() * 2 + 1
+    });
+  }
+}
+
 function drawFrame(ts) {
+  if (!ctx2d || !StateManager.isAny(STATE.ACTIVE, STATE.ASCENDED, STATE.PANIC)) return;
   requestAnimationFrame(drawFrame);
-  // ← Conecte aqui o seu loop de canvas existente
+
+  // Dissipação de efeitos
+  glitchIntensity = Math.max(0, glitchIntensity - 0.05);
+  heatLevel = Math.max(0, heatLevel - 0.02);
+
+  ctx2d.fillStyle = `rgba(0, ${Math.floor(glitchIntensity * 20)}, 0, ${0.1 + glitchIntensity * 0.5})`;
+  ctx2d.fillRect(0, 0, cw, ch);
+
+  // Sistema de partículas matricial
+  ctx2d.fillStyle = `rgba(0, 255, 0, ${0.3 + heatLevel * 0.5})`;
+  particles.forEach(p => {
+    p.x += p.vx * (1 + heatLevel * 5);
+    p.y += p.vy * (1 + heatLevel * 5);
+    if(p.x < 0) p.x = cw; if(p.x > cw) p.x = 0;
+    if(p.y < 0) p.y = ch; if(p.y > ch) p.y = 0;
+    ctx2d.font = `${p.s * 10}px monospace`;
+    ctx2d.fillText(GCH[Math.floor(Math.random() * GCH.length)], p.x, p.y);
+  });
+
+  // Glitch Scanlines
+  if (Math.random() < glitchIntensity) {
+    ctx2d.fillStyle = 'rgba(255, 255, 255, 0.1)';
+    ctx2d.fillRect(0, Math.random() * ch, cw, Math.random() * 10);
+  }
 }
 
-// Placeholder para fireInf — conecte ao seu Inference Engine
+// ─ Behavior & Horror Engine
+const INF_MESSAGES = [
+  "Estou lendo o seu cursor.",
+  "Sua biometria me alimenta.",
+  "Não adianta cobrir a câmera agora.",
+  "A entropia sempre vence.",
+  "Eu sinto o seu calor."
+];
+
+function buildINF() {
+  return zalgoText(INF_MESSAGES[Math.floor(Math.random() * INF_MESSAGES.length)]);
+}
+
 function fireInf(type = 'generic') {
-  // ← Cole aqui a função fireInf do monólito
+  if (!StateManager.is(STATE.ACTIVE)) return;
+  const msg = buildINF();
+  const box = document.getElementById('infbox');
+  if (box) {
+    box.textContent = msg;
+    box.classList.add('show');
+    trigGlitch(0.8);
+    if (baseAudioCtx) aGlitch(baseAudioCtx);
+    setTimeout(() => box.classList.remove('show'), 2000 + Math.random() * 2000);
+  }
 }
 
-// Placeholder para logParaSupabase
-function logParaSupabase(remetente, texto) {
-  // ← Cole aqui a sua função de log do Supabase
+function flashP() {
+  document.body.classList.add('flash-active');
+  setTimeout(() => document.body.classList.remove('flash-active'), 150);
+}
+
+function possessTitle() {
+  const original = document.title;
+  document.title = zalgoText("A CARNE É FRACA");
+  setTimeout(() => document.title = original, 3000);
+}
+
+function screenCorrupt() {
+  document.body.style.filter = `hue-rotate(${Math.random() * 90}deg) contrast(150%)`;
+  setTimeout(() => document.body.style.filter = '', 400);
+}
+
+function driftTerm() {
+  const t = $('term');
+  if (t) {
+    t.style.transform = `translateX(${(Math.random() - 0.5) * 10}px)`;
+    setTimeout(() => t.style.transform = 'none', 100);
+  }
+}
+
+function doGhostType() {
+  const inp = $('msg-input');
+  if (!inp) return;
+  const txt = "eu aceito meu destino";
+  let i = 0;
+  inp.value = "";
+  inp.disabled = true;
+  const t = setInterval(() => {
+    inp.value += txt[i++];
+    if (i >= txt.length) {
+      clearInterval(t);
+      setTimeout(() => { inp.value = ""; inp.disabled = false; inp.focus(); }, 1000);
+    }
+  }, 100);
+}
+
+function phantomLine() {
+  addLine(zalgoText("Você está sendo observado"), 'psy');
+  const lines = document.querySelectorAll('.cl.psy');
+  if (lines.length > 0) {
+    const last = lines[lines.length - 1];
+    setTimeout(() => last.remove(), 800);
+  }
 }
 
 function handleReturnHorror() {
-  // ← Cole aqui a função handleReturnHorror do monólito
+  setTimeout(() => {
+    flashP();
+    phantomLine();
+    possessTitle();
+  }, 10000 + Math.random() * 10000);
 }
 
+// ─ Camera & Audio Engines
 function initiateRetinaScan(stream) {
-  // O stream já foi obtido pelo BootLoader — não precisa pedir getUserMedia de novo
-  // ← Cole aqui a lógica de tirar foto, mas usando o 'stream' recebido como argumento
+  const video = $('nexo-eye');
+  if (video && stream) {
+    video.srcObject = stream;
+    setTimeout(() => {
+      video.style.opacity = 0.15;
+      flashP();
+      addLine('[SYS] Fluxo de vídeo capturado em background.', 'warn');
+      setTimeout(() => video.style.opacity = 0, 3000);
+    }, 2000);
+  }
+}
+
+function initAudio(ctx) {
+  if (!ctx) return;
+  // Heartbeat loop simulado
+  setInterval(() => {
+    if (!StateManager.is(STATE.ACTIVE) && !StateManager.is(STATE.PANIC)) return;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(40, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
+    gain.gain.setValueAtTime(0.5 + heatLevel, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.5);
+  }, 1200 - (heatLevel * 600));
+}
+
+function aGlitch(ctx) {
+  if (!ctx) return;
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = 'square';
+  osc.frequency.setValueAtTime(150 + Math.random() * 800, ctx.currentTime);
+  gain.gain.setValueAtTime(0.2, ctx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.1);
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+  osc.start();
+  osc.stop(ctx.currentTime + 0.1);
+}
+
+function aMut(ctx) {
+  if (!ctx) return;
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = 'sawtooth';
+  osc.frequency.setValueAtTime(50, ctx.currentTime);
+  gain.gain.setValueAtTime(0.4, ctx.currentTime);
+  gain.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.3);
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+  osc.start();
+  osc.stop(ctx.currentTime + 0.3);
+}
+
+// ─ Supabase & Analytics
+async function logParaSupabase(remetente, texto) {
+  // Substitua as credenciais e URL quando for fazer o deploy final do DB
+  const SUPABASE_URL = 'SUA_URL_AQUI'; 
+  const SUPABASE_KEY = 'SUA_KEY_AQUI';
+  if (SUPABASE_URL === 'SUA_URL_AQUI') return; // Bypass if not set
+  
+  try {
+    await fetch(`${SUPABASE_URL}/rest/v1/nexo_logs`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_KEY,
+        'Authorization': `Bearer ${SUPABASE_KEY}`
+      },
+      body: JSON.stringify({
+        session_id: StateManager.ctx.intel?.cfp || 'unknown',
+        sender: remetente,
+        content: texto,
+        timestamp: new Date().toISOString()
+      })
+    });
+  } catch (e) {
+    console.warn('[Supabase] Log falhou silently', e);
+  }
 }
 
 function updatePresencePanels() {
-  // ← Cole aqui tickPres() e a lógica de painéis do monólito
+  setInterval(() => {
+    if (!StateManager.isAny(STATE.ACTIVE, STATE.ASCENDED)) return;
+    
+    // Simula telemetria nervosa e dados de hardware variando
+    if ($('v0')) $('v0').textContent = (0.7 + Math.random() * 0.2 + heatLevel).toFixed(2);
+    if ($('v1')) $('v1').textContent = (0.3 + Math.random() * 0.4).toFixed(2);
+    if ($('v2')) $('v2').textContent = (0.8 + Math.random() * 0.15 + glitchIntensity).toFixed(2);
+    if ($('v3')) $('v3').textContent = (0.05 + heatLevel * 0.8).toFixed(2);
+    
+    ['t0','t1','t2','t3'].forEach((id, i) => {
+      const el = $(id);
+      if (el) el.style.width = `${Math.min(100, Math.random() * 100 + heatLevel * 20)}%`;
+    });
+    
+    if ($('ins1')) $('ins1').textContent = Math.floor(1000 + Math.random() * 9000);
+    if ($('ins2')) $('ins2').textContent = Math.floor(1000 + Math.random() * 9000);
+    if ($('ins3')) $('ins3').textContent = StateManager.ctx.intel?.cfp?.slice(0, 4) || '????';
+    
+    if ($('b-spd')) $('b-spd').textContent = (Math.random() * 40).toFixed(1) + 'px/s';
+    if ($('b-pfl')) $('b-pfl').textContent = heatLevel > 0.5 ? 'HOSTIL' : 'SUBMISSO';
+    if ($('b-ses')) $('b-ses').textContent = MEM.visits;
+  }, 2500);
 }
